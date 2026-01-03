@@ -115,11 +115,7 @@
       statusEl.textContent = "Loading Wild Card games…";
 
       // Load picks (OK if empty/missing; we’ll just show “No picks”)
-      let picksRows = [];
-      try {
-        const picksText = await fetch("wildcard_picks.csv", { cache: "no-store" }).then(r => r.text());
-        picksRows = parseCSV(picksText);
-      } catch (e) {
+let picksRows = [];
         // If file isn't there yet, that's fine.
       }
 
