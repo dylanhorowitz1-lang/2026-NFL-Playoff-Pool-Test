@@ -1,9 +1,148 @@
 <!doctype html>
 <html>
-<head><meta charset="utf-8"><title>Standings</title></head>
+<head>
+  <meta charset="utf-8" />
+  <title>Standings</title>
+</head>
 <body>
   <h1>Standings</h1>
-  <p>This page will automatically calculate standings once picks are uploaded and games start.</p>
   <p><a href="index.html">Home</a></p>
+
+  <div id="status">Loading…</div>
+
+  <table border="1" cellpadding="6" id="tbl" style="display:none;">
+    <thead>
+<thead>
+  <tr>
+    <th rowspan="2">Rank</th>
+    <th rowspan="2">Entrant</th>
+
+    <th colspan="4">Wild Card Round</th>
+    <th colspan="4">Divisional Round</th>
+    <th colspan="4">Conference Championships</th>
+    <th colspan="7">Super Bowl</th>
+
+    <th rowspan="2">Total</th>
+    <th rowspan="2">Tie-breaker</th>
+  </tr>
+  <tr>
+    <th>Advancing</th>
+    <th>Spread</th>
+    <th>O/U</th>
+    <th>Total WC</th>
+
+    <th>Advancing</th>
+    <th>Spread</th>
+    <th>O/U</th>
+    <th>Total DIV</th>
+
+    <th>Advancing</th>
+    <th>Spread</th>
+    <th>O/U</th>
+    <th>Total CONF</th>
+
+    <th>Advancing</th>
+    <th>Spread</th>
+    <th>O/U</th>
+    <th>AFC Champ</th>
+    <th>NFC Champ</th>
+    <th>SB Champ</th>
+    <th>Total SB</th>
+  </tr>
+</thead>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+<script>
+  // Your scoring rules (we’ll apply these once picks + lines are added)
+  const SCORING = {
+    WildCard:    { adv: 3,   ats: 2,   ou: 1   },
+    Divisional:  { adv: 4.5, ats: 3,   ou: 1.5 },
+    Conference:  { adv: 9,   ats: 6,   ou: 3   },
+    SuperBowl:   { adv: 13.5,ats: 9,   ou: 4.5 },
+    SB: { afc: 4.5, nfc: 4.5, bothTeams: 1.5, champ: 7.5 }
+  };
+
+  // Live scoreboard (proxy fallback)
+  const SCOREBOARD_URLS = [
+    "https://api.codetabs.com/v1/proxy/?quest=" + encodeURIComponent(
+      "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard"
+    ),
+    "https://corsproxy.io/?" + encodeURIComponent(
+      "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard"
+    )
+  ];
+
+  const statusEl = document.getElementById("status");
+  const tableEl = document.getElementById("tbl");
+  const tbodyEl = tableEl.querySelector("tbody");
+
+  async function fetchJsonWithFallback(urls) {
+    for (const u of urls) {
+      try {
+        const r = await fetch(u, { cache: "no-store" });
+        if (!r.ok) continue;
+        return await r.json();
+      } catch (e) {}
+    }
+    throw new Error("Failed to fetch live scoreboard");
+  }
+
+  // ---- Standings model (will be filled once we load picks/lines) ----
+  // This is the shape we’ll compute later:
+  // standings[name] = { wc, div, conf, sb, sbPred, total, tiebreaker }
+  function emptyStandingsRow(name) {
+    return { name, wc: 0, div: 0, conf: 0, sb: 0, sbPred: 0, total: 0, tiebreaker: 0 };
+  }
+
+  function renderStandings(rows) {
+    // sort: total desc, tiebreaker asc
+    rows.sort((a, b) => (b.total - a.total) || (a.tiebreaker - b.tiebreaker) || a.name.localeCompare(b.name));
+
+    tbodyEl.innerHTML = "";
+    rows.forEach((r, idx) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${idx + 1}</td>
+        <td>${r.name}</td>
+
+        <td>${r.wc}</td>
+        <td>${r.div}</td>
+        <td>${r.conf}</td>
+        <td>${r.sb}</td>
+        <td>${r.sbPred}</td>
+
+        <td><b>${r.total}</b></td>
+        <td>${r.tiebreaker}</td>
+      `;
+      tbodyEl.appendChild(tr);
+    });
+
+    tableEl.style.display = "";
+  }
+
+  async function main() {
+    statusEl.textContent = "Checking live NFL feed…";
+    const data = await fetchJsonWithFallback(SCOREBOARD_URLS);
+    const totalEvents = (data.events || []).length;
+
+    // For now we show an empty table until picks/lines exist.
+    // Next step will be adding these files:
+    // 1) wildcard_picks.csv (and later divisional_picks.csv, etc.)
+    // 2) lines.csv (GameID,Spread,Total) so we can score ATS + O/U
+    statusEl.textContent =
+      `Live feed OK (events returned: ${totalEvents}). Standings page is ready to calculate once picks + lines are uploaded.`;
+
+    // Show a placeholder empty table (so the layout is visible)
+    renderStandings([]);
+  }
+
+  main().catch(err => {
+    console.error(err);
+    statusEl.textContent = "Could not load live feed right now.";
+    tableEl.style.display = "none";
+  });
+</script>
 </body>
 </html>
