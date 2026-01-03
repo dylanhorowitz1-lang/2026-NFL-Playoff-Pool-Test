@@ -1,9 +1,160 @@
 <!doctype html>
 <html>
-<head><meta charset="utf-8"><title>Wild Card Picks</title></head>
+<head>
+  <meta charset="utf-8" />
+  <title>Wild Card Picks</title>
+</head>
 <body>
   <h1>Wild Card Picks</h1>
-  <p>Once picks are in, this page will show everyone’s selections.</p>
   <p><a href="index.html">Home</a></p>
+  <div id="status"></div>
+  <div id="games"></div>
+
+  <script>
+    const statusEl = document.getElementById("status");
+    const gamesEl = document.getElementById("games");
+
+    // CORS-safe ESPN scoreboard URL
+    const scoreboardUrl =
+      "https://api.allorigins.win/raw?url=" +
+      encodeURIComponent("https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard");
+
+    function parseCSV(text) {
+      const lines = text.trim().split(/\r?\n/);
+      if (lines.length < 2) return [];
+      const headers = lines[0].split(",").map(h => h.trim());
+      return lines.slice(1).filter(Boolean).map(line => {
+        const cols = line.split(",").map(c => c.trim());
+        const obj = {};
+        headers.forEach((h, i) => obj[h] = cols[i] ?? "");
+        return obj;
+      });
+    }
+
+    function getWildCardEvents(data) {
+      const events = data.events || [];
+      // Best-effort filter: postseason week 1 is typically Wild Card.
+      return events.filter(ev => {
+        const isPostseason = (ev.season?.type === 3) || (String(ev.season?.slug || "").includes("post"));
+        const isWeek1 = (ev.week?.number === 1);
+        return isPostseason && isWeek1;
+      });
+    }
+
+    function eventLabel(ev) {
+      const comp = ev.competitions?.[0];
+      const teams = comp?.competitors || [];
+      const away = teams.find(t => t.homeAway === "away");
+      const home = teams.find(t => t.homeAway === "home");
+      const status = comp?.status?.type?.shortDetail || "";
+      const awayScore = away?.score ?? "";
+      const homeScore = home?.score ?? "";
+      return {
+        matchup: `${away?.team?.displayName || "Away"} @ ${home?.team?.displayName || "Home"}`,
+        status,
+        score: (awayScore !== "" || homeScore !== "") ? `${awayScore} - ${homeScore}` : ""
+      };
+    }
+
+    function renderGameSection(ev, picksByGame) {
+      const { matchup, status, score } = eventLabel(ev);
+      const gameId = String(ev.id);
+
+      const section = document.createElement("section");
+      section.style.marginBottom = "24px";
+
+      const h2 = document.createElement("h2");
+      h2.textContent = matchup;
+      section.appendChild(h2);
+
+      const meta = document.createElement("div");
+      meta.textContent = `GameID: ${gameId}  |  ${status}${score ? "  |  " + score : ""}`;
+      section.appendChild(meta);
+
+      const picks = picksByGame.get(gameId) || [];
+
+      if (picks.length === 0) {
+        const p = document.createElement("p");
+        p.textContent = "No picks uploaded yet for this game.";
+        section.appendChild(p);
+        return section;
+      }
+
+      const table = document.createElement("table");
+      table.border = "1";
+      table.cellPadding = "6";
+
+      const thead = document.createElement("thead");
+      thead.innerHTML = `
+        <tr>
+          <th>Name</th>
+          <th>Advancing</th>
+          <th>Spread Winner</th>
+          <th>Over/Under</th>
+        </tr>`;
+      table.appendChild(thead);
+
+      const tbody = document.createElement("tbody");
+      picks.forEach(r => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${r.Name || ""}</td>
+          <td>${r.PickAdvancing || ""}</td>
+          <td>${r.PickATS || ""}</td>
+          <td>${r.PickOU || ""}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+
+      section.appendChild(table);
+      return section;
+    }
+
+    async function main() {
+      statusEl.textContent = "Loading Wild Card games…";
+
+      // Load picks (OK if empty/missing; we’ll just show “No picks”)
+      let picksRows = [];
+      try {
+        const picksText = await fetch("wildcard_picks.csv", { cache: "no-store" }).then(r => r.text());
+        picksRows = parseCSV(picksText);
+      } catch (e) {
+        // If file isn't there yet, that's fine.
+      }
+
+      // Group picks by GameID
+      const picksByGame = new Map();
+      picksRows.forEach(r => {
+        const gid = String(r.GameID || "");
+        if (!gid) return;
+        if (!picksByGame.has(gid)) picksByGame.set(gid, []);
+        picksByGame.get(gid).push(r);
+      });
+
+      // Load live games
+      const data = await fetch(scoreboardUrl, { cache: "no-store" }).then(r => r.json());
+      const wcEvents = getWildCardEvents(data);
+
+      gamesEl.innerHTML = "";
+
+      if (wcEvents.length === 0) {
+        statusEl.textContent = "Wild Card games are not available yet.";
+        return;
+      }
+
+      statusEl.textContent = `Showing Wild Card games (${wcEvents.length}).`;
+
+      // Render up to 6 (Wild Card round is 6 games)
+      wcEvents.slice(0, 6).forEach(ev => {
+        gamesEl.appendChild(renderGameSection(ev, picksByGame));
+      });
+    }
+
+    main().catch(err => {
+      console.error(err);
+      statusEl.textContent = "Could not load Wild Card games right now.";
+    });
+  </script>
 </body>
 </html>
