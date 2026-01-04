@@ -1,17 +1,115 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
 <head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>NFL Playoff Pool 2026</title>
+  <style>
+    :root{
+      --bg:#0b1020;
+      --card:#111a33;
+      --card2:#0f1730;
+      --text:#e8ecff;
+      --muted:#a9b3da;
+      --accent:#5eead4;
+      --border: rgba(255,255,255,.12);
+      --shadow: 0 12px 30px rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background: radial-gradient(1200px 500px at 20% -10%, rgba(94,234,212,.18), transparent 60%),
+                  radial-gradient(900px 500px at 100% 0%, rgba(99,102,241,.22), transparent 55%),
+                  var(--bg);
+      color:var(--text);
+      min-height:100vh;
+    }
+    .wrap{max-width:980px;margin:0 auto;padding:28px 16px 44px}
+    .top{
+      display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;
+      padding:18px 18px 10px;border:1px solid var(--border);border-radius:18px;background:rgba(17,26,51,.55);
+      box-shadow: var(--shadow); backdrop-filter: blur(10px);
+    }
+    h1{margin:0;font-size:28px;letter-spacing:.2px}
+    .sub{margin:6px 0 0;color:var(--muted);max-width:640px;line-height:1.45}
+    .pill{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:8px 10px;border:1px solid var(--border);border-radius:999px;
+      color:var(--muted);font-size:12px;background:rgba(15,23,48,.55)
+    }
+    .grid{
+      margin-top:18px;
+      display:grid;grid-template-columns:repeat(12,1fr);gap:12px;
+    }
+    .card{
+      grid-column: span 6;
+      border:1px solid var(--border);
+      border-radius:18px;
+      background: linear-gradient(180deg, rgba(17,26,51,.75), rgba(15,23,48,.65));
+      box-shadow: var(--shadow);
+      padding:16px 16px 14px;
+      text-decoration:none;color:inherit;
+      transition: transform .12s ease, border-color .12s ease;
+    }
+    .card:hover{transform: translateY(-2px);border-color: rgba(94,234,212,.45)}
+    .title{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .title b{font-size:16px}
+    .title span{color:var(--accent);font-size:12px}
+    .desc{margin:8px 0 0;color:var(--muted);line-height:1.45;font-size:13px}
+    .footer{
+      margin-top:18px;
+      color:var(--muted);
+      font-size:12px;
+      padding:12px 2px 0;
+      display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;
+    }
+    @media (max-width: 760px){
+      .card{grid-column: span 12;}
+      h1{font-size:24px}
+    }
+  </style>
 </head>
 <body>
-  <h1>Welcome to the 2026 NFL Playoff Pool</h1>
-  <p>This site will show picks, standings, and scores.</p>
-<ul>
-  <li><a href="rules.html">Rules</a></li>
-  <li><a href="standings.html">Standings</a></li>
-  <li><a href="wildcard.html">Wild Card Picks</a></li>
-  <li><a href="superbowl.html">Super Bowl Predictions</a></li>
-  <li><a href="games.html">NFL Game Scores</a></li>
-</ul>
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <h1>NFL Playoff Pool 2026</h1>
+        <p class="sub">View picks and standings throughout the playoffs. Standings update when game results are final and the CSVs are updated.</p>
+      </div>
+      <div class="pill">Public view-only • No emails shown</div>
+    </div>
+
+    <div class="grid">
+      <a class="card" href="standings.html">
+        <div class="title"><b>Standings</b><span>Live scoring</span></div>
+        <div class="desc">Overall leaderboard with round-by-round scoring and tie-breaker.</div>
+      </a>
+
+      <a class="card" href="wildcard.html">
+        <div class="title"><b>Wild Card Picks</b><span>Grid view</span></div>
+        <div class="desc">Everyone’s picks with a results row and correct/incorrect highlighting.</div>
+      </a>
+
+      <a class="card" href="superbowl.html">
+        <div class="title"><b>Super Bowl Predictions</b><span>AFC / NFC / Champ</span></div>
+        <div class="desc">See each entrant’s championship predictions.</div>
+      </a>
+
+      <a class="card" href="rules.html">
+        <div class="title"><b>Rules</b><span>Scoring</span></div>
+        <div class="desc">Scoring by round, defaults, and tie-breaker details.</div>
+      </a>
+    </div>
+
+    <div class="footer">
+      <div>Tip: bookmark this page.</div>
+      <div>Last updated: <span id="ts"></span></div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById("ts").textContent = new Date().toLocaleString();
+  </script>
 </body>
 </html>
