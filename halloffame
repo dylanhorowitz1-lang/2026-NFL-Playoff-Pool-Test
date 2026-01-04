@@ -83,30 +83,29 @@
             <th>1st Place</th>
             <th>2nd Place</th>
             <th>3rd Place</th>
-            <th>Notes</th>
           </tr>
         </thead>
         <tbody>
           <!-- Replace these rows with your real history -->
           <tr>
             <td>2025</td>
-            <td class="left">TBD</td>
-            <td class="left">TBD</td>
-            <td>TBD</td>
-            <td></td>
-          </tr>
+            <td class="left">Caitlin Fabian</td>
+            <td class="left">Dylan Horowitz</td>
+            <td class="left">Simon Gerszberg</td>
+</tr>
           <tr>
             <td>2024</td>
-            <td class="left">TBD</td>
-            <td class="left">TBD</td>
-            <td>TBD</td>
+            <td class="left">Mike Dorn</td>
+            <td class="left">Baby Doc</td>
+            <td class="left">Sam Adams</td>
             <td></td>
           </tr>
           <tr>
             <td>2023</td>
-            <td class="left">TBD</td>
-            <td class="left">TBD</td>
-            <td>TBD</td>
+            <td class="left">JE Negron</td>
+            <td class="left">Andrew Gee</td>
+            <td class="left">Ajay Balakrishnan</td>
+            <td></td>
             <td></td>
           </tr>
         </tbody>
