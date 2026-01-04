@@ -1,71 +1,171 @@
 <!doctype html>
 <html>
 <head>
-  <meta charset="utf-8">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Pool Rules</title>
+  <style>
+    :root{
+      --bg:#0b1020;
+      --card:#111a33;
+      --card2:#0f1730;
+      --text:#e8ecff;
+      --muted:#a9b3da;
+      --accent:#5eead4;
+      --border: rgba(255,255,255,.12);
+      --shadow: 0 12px 30px rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background: radial-gradient(1200px 500px at 20% -10%, rgba(94,234,212,.18), transparent 60%),
+                  radial-gradient(900px 500px at 100% 0%, rgba(99,102,241,.22), transparent 55%),
+                  var(--bg);
+      color:var(--text);
+      min-height:100vh;
+    }
+    .wrap{max-width:980px;margin:0 auto;padding:28px 16px 44px}
+    .top{
+      display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;
+      padding:18px 18px 10px;border:1px solid var(--border);border-radius:18px;background:rgba(17,26,51,.55);
+      box-shadow: var(--shadow); backdrop-filter: blur(10px);
+    }
+    h1{margin:0;font-size:28px;letter-spacing:.2px}
+    .sub{margin:6px 0 0;color:var(--muted);max-width:760px;line-height:1.45}
+    .pill{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:8px 10px;border:1px solid var(--border);border-radius:999px;
+      color:var(--muted);font-size:12px;background:rgba(15,23,48,.55)
+    }
+    .nav{
+      margin-top:12px;
+      display:flex;gap:10px;flex-wrap:wrap;
+    }
+    .btn{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:10px 12px;border-radius:12px;
+      border:1px solid var(--border);
+      background: rgba(15,23,48,.65);
+      color:var(--text);
+      text-decoration:none;
+      transition: transform .12s ease, border-color .12s ease;
+    }
+    .btn:hover{transform: translateY(-1px);border-color: rgba(94,234,212,.45)}
+    .grid{
+      margin-top:18px;
+      display:grid;grid-template-columns:repeat(12,1fr);gap:12px;
+    }
+    .card{
+      grid-column: span 12;
+      border:1px solid var(--border);
+      border-radius:18px;
+      background: linear-gradient(180deg, rgba(17,26,51,.75), rgba(15,23,48,.65));
+      box-shadow: var(--shadow);
+      padding:16px 16px 14px;
+    }
+    h2{margin:0 0 8px;font-size:18px}
+    h3{margin:14px 0 8px;font-size:15px;color:var(--accent)}
+    p, li{color:var(--muted);line-height:1.55}
+    ul{margin:8px 0 0 18px}
+    .ruleline{margin:8px 0 0}
+    .footer{
+      margin-top:16px;
+      color:var(--muted);
+      font-size:12px;
+      display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;
+      padding:0 2px;
+    }
+  </style>
 </head>
 <body>
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <h1>Pool Rules</h1>
+        <p class="sub">How to pick games, how scoring works each round, and how tie-breakers are determined.</p>
+        <div class="nav">
+          <a class="btn" href="index.html">Home</a>
+          <a class="btn" href="standings.html">Standings</a>
+          <a class="btn" href="wildcard.html">Wild Card Picks</a>
+          <a class="btn" href="superbowl.html">Super Bowl Predictions</a>
+        </div>
+      </div>
+      <div class="pill">Scoring rules</div>
+    </div>
 
-<h1>NFL Playoff Pool Rules</h1>
+    <div class="grid">
+      <div class="card">
+        <h2>Picks</h2>
+        <p class="ruleline">For each NFL playoff game, entrants select:</p>
+        <ul>
+          <li><b>Advancing Team</b></li>
+          <li><b>Spread Winner</b></li>
+          <li><b>Over / Under</b></li>
+        </ul>
+        <p class="ruleline">Picks are submitted weekly. Super Bowl predictions are submitted once before the playoffs begin.</p>
+        <p class="ruleline"><b>Default picks</b> for not submitting will be away team, underdog, and under. If you submit more than once, the last submission is used.</p>
+      </div>
 
-<p>
-For each NFL Playoff game, entrants will select:
-</p>
+      <div class="card">
+        <h2>Scoring by Round</h2>
 
-<ul>
-  <li>Advancing Team</li>
-  <li>Spread Winner</li>
-  <li>Over / Under</li>
-</ul>
+        <h3>Wild Card Round</h3>
+        <ul>
+          <li>3 points – Advancing Team</li>
+          <li>2 points – Spread Winner</li>
+          <li>1 point – Over / Under</li>
+        </ul>
 
-<p>
-Picks are submitted weekly. Super Bowl predictions are submitted once before the playoffs begin.
-</p>
+        <h3>Divisional Round</h3>
+        <ul>
+          <li>4.5 points – Advancing Team</li>
+          <li>3 points – Spread Winner</li>
+          <li>1.5 points – Over / Under</li>
+        </ul>
 
-<h2>Scoring</h2>
+        <h3>Conference Championships</h3>
+        <ul>
+          <li>9 points – Advancing Team</li>
+          <li>6 points – Spread Winner</li>
+          <li>3 points – Over / Under</li>
+        </ul>
 
-<h3>Wild Card Round</h3>
-<ul>
-  <li>3 points – Advancing Team</li>
-  <li>2 points – Spread Winner</li>
-  <li>1 point – Over / Under</li>
-</ul>
+        <h3>Super Bowl</h3>
+        <ul>
+          <li>13.5 points – Advancing Team</li>
+          <li>9 points – Spread Winner</li>
+          <li>4.5 points – Over / Under</li>
+        </ul>
+      </div>
 
-<h3>Divisional Round</h3>
-<ul>
-  <li>4.5 points – Advancing Team</li>
-  <li>3 points – Spread Winner</li>
-  <li>1.5 points – Over / Under</li>
-</ul>
+      <div class="card">
+        <h2>Super Bowl Predictions</h2>
+        <ul>
+          <li>4.5 points – Correct AFC Champion</li>
+          <li>4.5 points – Correct NFC Champion</li>
+          <li>1.5 points – Predict both teams correctly (bonus)</li>
+          <li>7.5 points – Correct Super Bowl Champion</li>
+        </ul>
+      </div>
 
-<h3>Conference Championships</h3>
-<ul>
-  <li>9 points – Advancing Team</li>
-  <li>6 points – Spread Winner</li>
-  <li>3 points – Over / Under</li>
-</ul>
+      <div class="card">
+        <h2>Tie-Breaker</h2>
+        <p>
+          Cumulative total of the point differential (against the spread) between your selection and the team they are playing.
+          Losing selections earn points (bad). Winning selections earn 0 points (good). Lower tie-breaker is better.
+        </p>
+      </div>
+    </div>
 
-<h3>Super Bowl</h3>
-<ul>
-  <li>13.5 points – Advancing Team</li>
-  <li>9 points – Spread Winner</li>
-  <li>4.5 points – Over / Under</li>
-</ul>
+    <div class="footer">
+      <div>Public view-only • No emails shown</div>
+      <div>Last updated: <span id="ts"></span></div>
+    </div>
+  </div>
 
-<h3>Super Bowl Predictions</h3>
-<ul>
-  <li>4.5 points – Correct AFC Champion</li>
-  <li>4.5 points – Correct NFC Champion</li>
-  <li>1.5 points – Both teams correct</li>
-  <li>7.5 points – Super Bowl Champion</li>
-</ul>
-
-<h2>Tie-Breaker</h2>
-<p>
-Cumulative point differential against the spread. Lower is better.
-</p>
-
-<p><a href="index.html">Home</a></p>
-
+  <script>
+    document.getElementById("ts").textContent = new Date().toLocaleString();
+  </script>
 </body>
 </html>
