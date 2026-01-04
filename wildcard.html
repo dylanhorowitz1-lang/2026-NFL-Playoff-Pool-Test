@@ -6,10 +6,7 @@
   <style>
     table { border-collapse: collapse; width: 100%; }
     th, td { border: 1px solid #000; padding: 6px; text-align: center; }
-    th.game { font-weight: bold; }
-    td.name { text-align: left; font-weight: bold; }
-    .correct { background: #c6efce; }   /* green */
-    .wrong   { background: #ffc7ce; }   /* red */
+    td.name, th.name { text-align: left; font-weight: bold; }
     .pending { background: #e7e6e6; }   /* gray */
   </style>
 </head>
@@ -17,67 +14,114 @@
   <h1>Wild Card Picks</h1>
   <p><a href="index.html">Home</a></p>
 
+  <div id="msg" style="margin: 8px 0;"></div>
+
   <table id="picksTable">
-    <thead>
-      <!-- Row 1: Game headers (matchups) -->
-      <tr>
-        <th rowspan="2">Entrant</th>
-
-        <!-- Each game takes 3 columns -->
-        <th class="game" colspan="3">Bills @ Chiefs</th>
-        <th class="game" colspan="3">Ravens @ Texans</th>
-        <th class="game" colspan="3">Cowboys @ Eagles</th>
-        <th class="game" colspan="3">Packers @ Lions</th>
-        <th class="game" colspan="3">Rams @ 49ers</th>
-        <th class="game" colspan="3">Browns @ Bengals</th>
-      </tr>
-
-      <!-- Row 2: Results row (under each game header) -->
-      <tr>
-        <!-- Game 1 results -->
-        <td class="pending" colspan="3">
-          <b>Results:</b> <span id="g1_results">TBD</span>
-        </td>
-        <!-- Game 2 results -->
-        <td class="pending" colspan="3">
-          <b>Results:</b> <span id="g2_results">TBD</span>
-        </td>
-        <td class="pending" colspan="3"><b>Results:</b> <span id="g3_results">TBD</span></td>
-        <td class="pending" colspan="3"><b>Results:</b> <span id="g4_results">TBD</span></td>
-        <td class="pending" colspan="3"><b>Results:</b> <span id="g5_results">TBD</span></td>
-        <td class="pending" colspan="3"><b>Results:</b> <span id="g6_results">TBD</span></td>
-      </tr>
-
-      <!-- Row 3: Sub-headers -->
-      <tr>
-        <th>Entrant</th>
-
-        <th>Adv</th><th>Spread</th><th>O/U</th>
-        <th>Adv</th><th>Spread</th><th>O/U</th>
-        <th>Adv</th><th>Spread</th><th>O/U</th>
-        <th>Adv</th><th>Spread</th><th>O/U</th>
-        <th>Adv</th><th>Spread</th><th>O/U</th>
-        <th>Adv</th><th>Spread</th><th>O/U</th>
-      </tr>
-    </thead>
-
-    <tbody>
-      <!-- Example row (we will replace with CSV later) -->
-      <tr>
-        <td class="name">Alice</td>
-
-        <td class="pending">TBD</td><td class="pending">TBD</td><td class="pending">TBD</td>
-        <td class="pending">TBD</td><td class="pending">TBD</td><td class="pending">TBD</td>
-        <td class="pending">TBD</td><td class="pending">TBD</td><td class="pending">TBD</td>
-        <td class="pending">TBD</td><td class="pending">TBD</td><td class="pending">TBD</td>
-        <td class="pending">TBD</td><td class="pending">TBD</td><td class="pending">TBD</td>
-        <td class="pending">TBD</td><td class="pending">TBD</td><td class="pending">TBD</td>
-      </tr>
-    </tbody>
+    <thead id="thead"></thead>
+    <tbody id="tbody"></tbody>
   </table>
 
-  <p style="margin-top:10px;">
-    Green = correct, Red = incorrect, Gray = pending.
-  </p>
+<script>
+  // ESPN scoreboard via proxy fallback (same approach that worked for you)
+  const SCOREBOARD_URLS = [
+    "https://api.codetabs.com/v1/proxy/?quest=" + encodeURIComponent(
+      "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard"
+    ),
+    "https://corsproxy.io/?" + encodeURIComponent(
+      "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard"
+    )
+  ];
+
+  const msgEl = document.getElementById("msg");
+  const theadEl = document.getElementById("thead");
+  const tbodyEl = document.getElementById("tbody");
+
+  function buildEmptyShell() {
+    theadEl.innerHTML = `
+      <tr><th class="name">Entrant</th></tr>
+      <tr><td class="pending"><b>Results:</b> TBD</td></tr>
+      <tr><th class="name">Entrant</th></tr>
+    `;
+    tbodyEl.innerHTML = "";
+  }
+
+  async function fetchJsonWithFallback(urls) {
+    for (const u of urls) {
+      try {
+        const r = await fetch(u, { cache: "no-store" });
+        if (!r.ok) continue;
+        return await r.json();
+      } catch (e) {}
+    }
+    throw new Error("Failed to fetch scoreboard");
+  }
+
+  function getWildCardEvents(data) {
+    const events = data.events || [];
+    // Best-effort: postseason + week 1 = Wild Card
+    return events.filter(ev => {
+      const isPostseason = (ev.season?.type === 3) || String(ev.season?.slug || "").includes("post");
+      const isWeek1 = (ev.week?.number === 1);
+      return isPostseason && isWeek1;
+    }).slice(0, 6);
+  }
+
+  function labelMatchup(ev) {
+    const comp = ev.competitions?.[0];
+    const teams = comp?.competitors || [];
+    const away = teams.find(t => t.homeAway === "away");
+    const home = teams.find(t => t.homeAway === "home");
+    return `${away?.team?.displayName || "Away"} @ ${home?.team?.displayName || "Home"}`;
+  }
+
+  function buildHeadersFromGames(games) {
+    // Row 1: matchup headers (colspan=3 each)
+    let row1 = `<tr><th class="name" rowspan="2">Entrant</th>`;
+    games.forEach(g => {
+      row1 += `<th colspan="3">${labelMatchup(g)}</th>`;
+    });
+    row1 += `</tr>`;
+
+    // Row 2: results row under each matchup header
+    let row2 = `<tr>`;
+    games.forEach((g, idx) => {
+      row2 += `<td class="pending" colspan="3"><b>Results:</b> <span id="res_${idx}">TBD</span></td>`;
+    });
+    row2 += `</tr>`;
+
+    // Row 3: subheaders (Adv/Spread/O-U)
+    let row3 = `<tr><th class="name">Entrant</th>`;
+    games.forEach(() => {
+      row3 += `<th>Adv</th><th>Spread</th><th>O/U</th>`;
+    });
+    row3 += `</tr>`;
+
+    theadEl.innerHTML = row1 + row2 + row3;
+  }
+
+  async function main() {
+    buildEmptyShell(); // always show something
+
+    const data = await fetchJsonWithFallback(SCOREBOARD_URLS);
+    const wcGames = getWildCardEvents(data);
+
+    if (wcGames.length === 0) {
+      msgEl.textContent = "Wild Card games not posted yet.";
+      return; // keep empty shell
+    }
+
+    msgEl.textContent = `Wild Card games found: ${wcGames.length}.`;
+    buildHeadersFromGames(wcGames);
+
+    // Picks rows will be wired next (CSV upload). Leave tbody empty for now.
+    tbodyEl.innerHTML = "";
+  }
+
+  main().catch(err => {
+    console.error(err);
+    msgEl.textContent = "Could not load games right now.";
+    buildEmptyShell();
+  });
+</script>
 </body>
 </html>
