@@ -3,114 +3,420 @@
 <head>
   <meta charset="utf-8" />
   <title>Standings</title>
-
   <style>
-    table { border-collapse: collapse; }
-    th, td { padding: 6px; border: 1px solid #000; text-align: center; }
-    .col-hidden { display: none; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #000; padding: 6px; text-align: center; }
+    th.name, td.name { text-align: left; font-weight: bold; white-space: nowrap; }
+    .small { font-size: 12px; opacity: 0.85; }
   </style>
 </head>
-
 <body>
   <h1>Standings</h1>
   <p><a href="index.html">Home</a></p>
+  <div id="msg" class="small" style="margin: 8px 0;"></div>
 
   <table id="tbl">
     <thead>
       <tr>
-        <th rowspan="2" data-col="rank">Rank</th>
-        <th rowspan="2" data-col="entrant">Entrant</th>
+        <th rowspan="2">Rank</th>
+        <th rowspan="2" class="name">Entrant</th>
 
         <th colspan="4">Wild Card Round</th>
         <th colspan="4">Divisional Round</th>
         <th colspan="4">Conference Championships</th>
         <th colspan="7">Super Bowl</th>
 
-        <th rowspan="2" data-col="total">Total</th>
-        <th rowspan="2" data-col="tb">Tie-breaker</th>
+        <th rowspan="2">Total</th>
+        <th rowspan="2">Tie-breaker</th>
       </tr>
 
       <tr>
-        <th data-col="wc_adv">Advancing</th>
-        <th data-col="wc_ats">Spread</th>
-        <th data-col="wc_ou">O/U</th>
-        <th data-col="wc_total">WC Total</th>
+        <th>Adv</th><th>Spread</th><th>O/U</th><th>Total WC</th>
+        <th>Adv</th><th>Spread</th><th>O/U</th><th>Total DIV</th>
+        <th>Adv</th><th>Spread</th><th>O/U</th><th>Total CONF</th>
 
-        <th data-col="div_adv">Advancing</th>
-        <th data-col="div_ats">Spread</th>
-        <th data-col="div_ou">O/U</th>
-        <th data-col="div_total">DIV Total</th>
-
-        <th data-col="conf_adv">Advancing</th>
-        <th data-col="conf_ats">Spread</th>
-        <th data-col="conf_ou">O/U</th>
-        <th data-col="conf_total">CONF Total</th>
-
-        <th data-col="sb_adv">Advancing</th>
-        <th data-col="sb_ats">Spread</th>
-        <th data-col="sb_ou">O/U</th>
-        <th data-col="sb_afc">AFC</th>
-        <th data-col="sb_nfc">NFC</th>
-        <th data-col="sb_champ">SB Champ</th>
-        <th data-col="sb_total">SB Total</th>
+        <th>Adv</th><th>Spread</th><th>O/U</th>
+        <th>AFC</th><th>NFC</th><th>SB Champ</th><th>Total SB</th>
       </tr>
     </thead>
-
-    <tbody>
-      <!-- Rows will be injected here later -->
-    </tbody>
+    <tbody id="tbody"></tbody>
   </table>
 
 <script>
-/*
-  This function will be called AFTER real data is rendered.
-  It hides any column that has no real values.
-*/
-function applyAutoColumnVisibility() {
-  const table = document.getElementById("tbl");
-  const alwaysShow = new Set(["rank", "entrant", "total", "tb"]);
+  // ESPN scoreboard via proxy fallback
+  const SCOREBOARD_URLS = [
+    "https://api.codetabs.com/v1/proxy/?quest=" + encodeURIComponent(
+      "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard"
+    ),
+    "https://corsproxy.io/?" + encodeURIComponent(
+      "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard"
+    )
+  ];
 
-  // Hide/show individual columns
-  const cols = new Set(
-    Array.from(table.querySelectorAll("[data-col]"))
-      .map(el => el.getAttribute("data-col"))
-  );
-
-  cols.forEach(col => {
-    if (alwaysShow.has(col)) return;
-
-    const cells = table.querySelectorAll(`[data-col="${col}"]`);
-    const hasValue = Array.from(cells).some(c => {
-      const v = c.textContent.trim();
-      return v !== "" && v !== "0";
-    });
-
-    cells.forEach(c => c.classList.toggle("col-hidden", !hasValue));
-  });
-
-  // Hide grouped headers if all child columns are hidden
-  const groupMap = {
-    "Wild Card Round": ["wc_adv","wc_ats","wc_ou","wc_total"],
-    "Divisional Round": ["div_adv","div_ats","div_ou","div_total"],
-    "Conference Championships": ["conf_adv","conf_ats","conf_ou","conf_total"],
-    "Super Bowl": ["sb_adv","sb_ats","sb_ou","sb_afc","sb_nfc","sb_champ","sb_total"]
+  // Scoring (your rules)
+  const SC = {
+    WC:   { adv: 3,    ats: 2,   ou: 1   },
+    DIV:  { adv: 4.5,  ats: 3,   ou: 1.5 },
+    CONF: { adv: 9,    ats: 6,   ou: 3   },
+    SB:   { adv: 13.5, ats: 9,   ou: 4.5 },
+    PRED: { afc: 4.5, nfc: 4.5, both: 1.5, champ: 7.5 }
   };
 
-  const headerRow = table.querySelector("thead tr:first-child");
-  Array.from(headerRow.children).forEach(th => {
-    const label = th.textContent.trim();
-    if (!groupMap[label]) return;
+  const msgEl = document.getElementById("msg");
+  const tbodyEl = document.getElementById("tbody");
 
-    const shouldShow = groupMap[label].some(col =>
-      Array.from(table.querySelectorAll(`[data-col="${col}"]`))
-        .some(c => !c.classList.contains("col-hidden"))
-    );
+  function norm(s) { return String(s || "").trim().toLowerCase(); }
 
-    th.classList.toggle("col-hidden", !shouldShow);
+  function splitCSVLine(line) {
+    const out = [];
+    let cur = "", inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQ && line[i+1] === '"') { cur += '"'; i++; }
+        else inQ = !inQ;
+      } else if (ch === ',' && !inQ) {
+        out.push(cur); cur = "";
+      } else cur += ch;
+    }
+    out.push(cur);
+    return out.map(x => x.trim());
+  }
+
+  function parseCSV(text) {
+    const lines = text.replace(/\r/g, "").split("\n").filter(l => l.trim() !== "");
+    if (lines.length < 2) return [];
+    const headers = splitCSVLine(lines[0]);
+    return lines.slice(1).map(line => {
+      const cols = splitCSVLine(line);
+      const obj = {};
+      headers.forEach((h, i) => obj[h] = (cols[i] ?? ""));
+      return obj;
+    });
+  }
+
+  async function fetchJsonWithFallback(urls) {
+    for (const u of urls) {
+      try {
+        const r = await fetch(u, { cache: "no-store" });
+        if (!r.ok) continue;
+        return await r.json();
+      } catch (e) {}
+    }
+    throw new Error("Failed to fetch scoreboard");
+  }
+
+  async function fetchTextOrNull(path) {
+    try {
+      const r = await fetch(path, { cache: "no-store" });
+      if (!r.ok) return null;
+      return await r.text();
+    } catch (e) { return null; }
+  }
+
+  function parseLines(linesText) {
+    // lines.csv: GameID,HomeSpread,Total
+    const rows = parseCSV(linesText);
+    const map = new Map();
+    rows.forEach(r => {
+      const gid = String(r.GameID || "").trim();
+      const hs = Number(r.HomeSpread);
+      const tot = Number(r.Total);
+      if (!gid || Number.isNaN(hs) || Number.isNaN(tot)) return;
+      map.set(gid, { homeSpread: hs, total: tot });
+    });
+    return map;
+  }
+
+  function eventInfo(ev) {
+    const comp = ev.competitions?.[0];
+    const teams = comp?.competitors || [];
+    const away = teams.find(t => t.homeAway === "away");
+    const home = teams.find(t => t.homeAway === "home");
+
+    const awayName = away?.team?.displayName || "Away";
+    const homeName = home?.team?.displayName || "Home";
+
+    const awayScore = Number(away?.score ?? NaN);
+    const homeScore = Number(home?.score ?? NaN);
+
+    const isFinal = comp?.status?.type?.completed === true;
+    const winnerTeam = isFinal ? (teams.find(t => t.winner === true)?.team?.displayName || "") : "";
+
+    return { awayName, homeName, awayScore, homeScore, isFinal, winnerTeam, name: (ev.name || ev.shortName || "") };
+  }
+
+  function computeATSWinnerAndMargin(info, homeSpread) {
+    // homeMargin = (homeScore + homeSpread) - awayScore
+    const homeMargin = (info.homeScore + homeSpread) - info.awayScore;
+    let winner = "Push";
+    if (homeMargin > 0) winner = info.homeName;
+    else if (homeMargin < 0) winner = info.awayName;
+    return { atsWinner: winner, homeMargin };
+  }
+
+  function computeOU(info, total) {
+    const sum = info.homeScore + info.awayScore;
+    if (sum > total) return "Over";
+    if (sum < total) return "Under";
+    return "Push";
+  }
+
+  function pickSide(pick, homeName, awayName) {
+    const p = norm(pick);
+    if (!p) return "";
+    if (p === norm(homeName)) return "home";
+    if (p === norm(awayName)) return "away";
+    return ""; // unknown
+  }
+
+  function extractGameIdsWide(row, nGames) {
+    const ids = [];
+    for (let i = 1; i <= nGames; i++) ids.push(String(row[`GameID${i}`] || "").trim());
+    return ids;
+  }
+
+  function scoreRound(picksRows, nGames, roundKey, weights, eventsById, linesById, standings) {
+    // standings[name] fields to fill:
+    // { wc_adv, wc_ats, wc_ou, wc_total, ... } etc.
+    const prefix = roundKey.toLowerCase(); // wc/div/conf/sb
+
+    picksRows.forEach(r => {
+      const name = String(r.Name || "").trim();
+      if (!name) return;
+
+      if (!standings.has(name)) {
+        standings.set(name, {
+          name,
+          wc_adv:0,wc_ats:0,wc_ou:0,wc_total:0,
+          div_adv:0,div_ats:0,div_ou:0,div_total:0,
+          conf_adv:0,conf_ats:0,conf_ou:0,conf_total:0,
+          sb_adv:0,sb_ats:0,sb_ou:0,
+          sb_afc:0,sb_nfc:0,sb_champ:0,sb_total:0,
+          total:0,
+          tiebreaker:0
+        });
+      }
+
+      const s = standings.get(name);
+      const gameIds = extractGameIdsWide(r, nGames);
+
+      for (let i = 1; i <= nGames; i++) {
+        const gid = gameIds[i-1];
+        if (!gid) continue;
+        const ev = eventsById.get(gid);
+        const line = linesById.get(gid);
+        if (!ev || !line) continue;
+
+        const info = eventInfo(ev);
+        if (!info.isFinal) continue;
+
+        const advPick = String(r[`PickAdvancing${i}`] || "").trim();
+        const atsPick = String(r[`PickATS${i}`] || "").trim();
+        const ouPick  = String(r[`Pick OU${i}`] || "").trim(); // note: space
+
+        // Adv
+        if (norm(advPick) && norm(advPick) === norm(info.winnerTeam)) s[`${prefix}_adv`] += weights.adv;
+
+        // ATS + tie-breaker
+        if (!Number.isNaN(info.homeScore) && !Number.isNaN(info.awayScore)) {
+          const { atsWinner, homeMargin } = computeATSWinnerAndMargin(info, line.homeSpread);
+
+          // Determine if ATS pick is home/away by team name
+          const side = pickSide(atsPick, info.homeName, info.awayName);
+
+          // Correct ATS?
+          if (atsWinner === "Push") {
+            // no points; no tiebreaker
+          } else {
+            const correctSide = (norm(atsWinner) === norm(info.homeName)) ? "home" : "away";
+            if (side && side === correctSide) {
+              s[`${prefix}_ats`] += weights.ats; // correct
+              // tiebreaker add 0
+            } else {
+              // tie-breaker miss amount:
+              // if picked home: miss = max(0, -homeMargin)
+              // if picked away: miss = max(0, homeMargin)
+              let miss = 0;
+              if (side === "home") miss = Math.max(0, -homeMargin);
+              else if (side === "away") miss = Math.max(0, homeMargin);
+              else {
+                // unknown entry -> treat as wrong; miss can't be computed reliably; use abs(homeMargin) as worst-case
+                miss = Math.abs(homeMargin);
+              }
+              s.tiebreaker += miss;
+            }
+          }
+
+          // O/U
+          const ouRes = computeOU(info, line.total);
+          if (ouRes !== "Push" && norm(ouPick) && norm(ouPick) === norm(ouRes)) s[`${prefix}_ou`] += weights.ou;
+        }
+      }
+
+      // Round total
+      if (roundKey === "WC")   s.wc_total   = s.wc_adv + s.wc_ats + s.wc_ou;
+      if (roundKey === "DIV")  s.div_total  = s.div_adv + s.div_ats + s.div_ou;
+      if (roundKey === "CONF") s.conf_total = s.conf_adv + s.conf_ats + s.conf_ou;
+      if (roundKey === "SB")   s.sb_total   = s.sb_adv + s.sb_ats + s.sb_ou + s.sb_afc + s.sb_nfc + s.sb_champ;
+    });
+  }
+
+  function getChampWinners(eventsById) {
+    // Best-effort: detect by event name containing AFC/NFC Championship / Super Bowl
+    let afcWinner = "";
+    let nfcWinner = "";
+    let sbWinner  = "";
+
+    for (const ev of eventsById.values()) {
+      const info = eventInfo(ev);
+      if (!info.isFinal) continue;
+
+      const title = norm(info.name);
+      if (!afcWinner && title.includes("afc") && title.includes("championship")) afcWinner = info.winnerTeam;
+      if (!nfcWinner && title.includes("nfc") && title.includes("championship")) nfcWinner = info.winnerTeam;
+      if (!sbWinner  && title.includes("super bowl")) sbWinner = info.winnerTeam;
+    }
+
+    return { afcWinner, nfcWinner, sbWinner };
+  }
+
+  function scorePredictions(predRows, champs, standings) {
+    predRows.forEach(r => {
+      const name = String(r.Name || "").trim();
+      if (!name) return;
+
+      if (!standings.has(name)) {
+        standings.set(name, {
+          name,
+          wc_adv:0,wc_ats:0,wc_ou:0,wc_total:0,
+          div_adv:0,div_ats:0,div_ou:0,div_total:0,
+          conf_adv:0,conf_ats:0,conf_ou:0,conf_total:0,
+          sb_adv:0,sb_ats:0,sb_ou:0,
+          sb_afc:0,sb_nfc:0,sb_champ:0,sb_total:0,
+          total:0,
+          tiebreaker:0
+        });
+      }
+
+      const s = standings.get(name);
+
+      const pickAFC = String(r.AFCChampion || "").trim();
+      const pickNFC = String(r.NFCChampion || "").trim();
+      const pickSB  = String(r.SuperBowlChampion || "").trim();
+
+      const afcCorrect = champs.afcWinner && norm(pickAFC) === norm(champs.afcWinner);
+      const nfcCorrect = champs.nfcWinner && norm(pickNFC) === norm(champs.nfcWinner);
+      const sbCorrect  = champs.sbWinner  && norm(pickSB)  === norm(champs.sbWinner);
+
+      s.sb_afc   = afcCorrect ? SC.PRED.afc : 0;
+      s.sb_nfc   = nfcCorrect ? SC.PRED.nfc : 0;
+      const both = (champs.afcWinner && champs.nfcWinner && afcCorrect && nfcCorrect) ? SC.PRED.both : 0;
+      s.sb_champ = sbCorrect ? SC.PRED.champ : 0;
+
+      // "Both teams" bonus
+      // (included in SB Total)
+      // We'll add it into sb_total below
+      s._sb_both_bonus = both;
+    });
+  }
+
+  function finalizeTotals(standings) {
+    standings.forEach(s => {
+      const sbPredTotal = (s.sb_afc || 0) + (s.sb_nfc || 0) + (s._sb_both_bonus || 0) + (s.sb_champ || 0);
+      const sbGameTotal = (s.sb_adv || 0) + (s.sb_ats || 0) + (s.sb_ou || 0);
+      s.sb_total = sbGameTotal + sbPredTotal;
+
+      s.total = (s.wc_total || 0) + (s.div_total || 0) + (s.conf_total || 0) + (s.sb_total || 0);
+
+      // clean temp
+      delete s._sb_both_bonus;
+    });
+  }
+
+  function renderTable(rows) {
+    // sort: total desc, tiebreaker asc
+    rows.sort((a,b) => (b.total - a.total) || (a.tiebreaker - b.tiebreaker) || a.name.localeCompare(b.name));
+
+    tbodyEl.innerHTML = "";
+    rows.forEach((r, idx) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${idx + 1}</td>
+        <td class="name">${r.name}</td>
+
+        <td>${r.wc_adv}</td><td>${r.wc_ats}</td><td>${r.wc_ou}</td><td><b>${r.wc_total}</b></td>
+        <td>${r.div_adv}</td><td>${r.div_ats}</td><td>${r.div_ou}</td><td><b>${r.div_total}</b></td>
+        <td>${r.conf_adv}</td><td>${r.conf_ats}</td><td>${r.conf_ou}</td><td><b>${r.conf_total}</b></td>
+
+        <td>${r.sb_adv}</td><td>${r.sb_ats}</td><td>${r.sb_ou}</td>
+        <td>${r.sb_afc}</td><td>${r.sb_nfc}</td><td>${r.sb_champ}</td><td><b>${r.sb_total}</b></td>
+
+        <td><b>${r.total}</b></td>
+        <td>${Number(r.tiebreaker).toFixed(1).replace(/\.0$/, "")}</td>
+      `;
+      tbodyEl.appendChild(tr);
+    });
+  }
+
+  async function main() {
+    msgEl.textContent = "Loading…";
+
+    const [linesText, wcText, divText, confText, sbText, predText] = await Promise.all([
+      fetchTextOrNull("lines.csv"),
+      fetchTextOrNull("wildcard_picks.csv"),
+      fetchTextOrNull("divisional_picks.csv"),
+      fetchTextOrNull("conference_picks.csv"),
+      fetchTextOrNull("superbowl_picks.csv"),
+      fetchTextOrNull("superbowl_predictions.csv")
+    ]);
+
+    if (!linesText) {
+      msgEl.textContent = "Missing lines.csv";
+      return;
+    }
+
+    const linesById = parseLines(linesText);
+
+    const scoreboard = await fetchJsonWithFallback(SCOREBOARD_URLS);
+    const eventsById = new Map();
+    (scoreboard.events || []).forEach(ev => { if (ev?.id) eventsById.set(String(ev.id), ev); });
+
+    const standings = new Map();
+
+    if (wcText)   scoreRound(parseCSV(wcText),   6, "WC",   SC.WC,   eventsById, linesById, standings);
+    if (divText)  scoreRound(parseCSV(divText),  4, "DIV",  SC.DIV,  eventsById, linesById, standings);
+    if (confText) scoreRound(parseCSV(confText), 2, "CONF", SC.CONF, eventsById, linesById, standings);
+    if (sbText)   scoreRound(parseCSV(sbText),   1, "SB",   SC.SB,   eventsById, linesById, standings);
+
+    const champs = getChampWinners(eventsById);
+    if (predText) scorePredictions(parseCSV(predText), champs, standings);
+
+    finalizeTotals(standings);
+
+    renderTable(Array.from(standings.values()));
+
+    const missing = [];
+    if (!wcText) missing.push("wildcard_picks.csv");
+    if (!divText) missing.push("divisional_picks.csv");
+    if (!confText) missing.push("conference_picks.csv");
+    if (!sbText) missing.push("superbowl_picks.csv");
+    if (!predText) missing.push("superbowl_predictions.csv");
+
+    const champBits = [
+      champs.afcWinner ? `AFC: ${champs.afcWinner}` : "AFC: TBD",
+      champs.nfcWinner ? `NFC: ${champs.nfcWinner}` : "NFC: TBD",
+      champs.sbWinner  ? `SB: ${champs.sbWinner}`  : "SB: TBD"
+    ].join(" | ");
+
+    msgEl.textContent = (missing.length ? `Missing: ${missing.join(", ")}. ` : "All pick files loaded. ")
+      + champBits;
+  }
+
+  main().catch(err => {
+    console.error(err);
+    msgEl.textContent = "Could not load standings right now.";
   });
-}
-    window.addEventListener("DOMContentLoaded", applyAutoColumnVisibility);
 </script>
-
 </body>
 </html>
