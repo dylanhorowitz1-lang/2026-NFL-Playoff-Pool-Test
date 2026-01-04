@@ -2,104 +2,181 @@
 <html>
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Super Bowl Predictions</title>
   <style>
-    table { border-collapse: collapse; width: 100%; }
-    th, td { border: 1px solid #000; padding: 6px; text-align: center; }
+    :root{
+      --bg:#0b1020;
+      --card:#111a33;
+      --card2:#0f1730;
+      --text:#e8ecff;
+      --muted:#a9b3da;
+      --accent:#5eead4;
+      --border: rgba(255,255,255,.12);
+      --shadow: 0 12px 30px rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background: radial-gradient(1200px 500px at 20% -10%, rgba(94,234,212,.18), transparent 60%),
+                  radial-gradient(900px 500px at 100% 0%, rgba(99,102,241,.22), transparent 55%),
+                  var(--bg);
+      color:var(--text);
+      min-height:100vh;
+    }
+    .wrap{max-width:1000px;margin:0 auto;padding:28px 16px 44px}
+    .top{
+      display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;
+      padding:18px 18px 10px;border:1px solid var(--border);border-radius:18px;background:rgba(17,26,51,.55);
+      box-shadow: var(--shadow); backdrop-filter: blur(10px);
+    }
+    h1{margin:0;font-size:28px;letter-spacing:.2px}
+    .sub{margin:6px 0 0;color:var(--muted);max-width:860px;line-height:1.45}
+    .pill{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:8px 10px;border:1px solid var(--border);border-radius:999px;
+      color:var(--muted);font-size:12px;background:rgba(15,23,48,.55)
+    }
+    .nav{
+      margin-top:12px;
+      display:flex;gap:10px;flex-wrap:wrap;
+    }
+    .btn{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:10px 12px;border-radius:12px;
+      border:1px solid var(--border);
+      background: rgba(15,23,48,.65);
+      color:var(--text);
+      text-decoration:none;
+      transition: transform .12s ease, border-color .12s ease;
+    }
+    .btn:hover{transform: translateY(-1px);border-color: rgba(94,234,212,.45)}
+    .card{
+      margin-top:18px;
+      border:1px solid var(--border);
+      border-radius:18px;
+      background: linear-gradient(180deg, rgba(17,26,51,.75), rgba(15,23,48,.65));
+      box-shadow: var(--shadow);
+      padding:14px;
+      overflow-x:auto;
+    }
+
+    table { border-collapse: collapse; width: 100%; min-width: 720px; }
+    th, td { border: 1px solid rgba(255,255,255,.18); padding: 8px; text-align: center; }
     th.name, td.name { text-align: left; font-weight: bold; white-space: nowrap; }
+    thead th { background: rgba(15,23,48,.95); position: sticky; top: 0; z-index: 2; }
+
+    #msg { color: var(--muted); font-size: 12px; margin-top: 10px; }
   </style>
 </head>
 <body>
-  <h1>Super Bowl Predictions</h1>
-  <p><a href="index.html">Home</a></p>
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <h1>Super Bowl Predictions</h1>
+        <p class="sub">Predictions load from <b>superbowl_predictions.csv</b>. Public view-only.</p>
+        <div class="nav">
+          <a class="btn" href="index.html">Home</a>
+          <a class="btn" href="standings.html">Standings</a>
+          <a class="btn" href="wildcard.html">Wild Card Picks</a>
+          <a class="btn" href="games.html">Playoff Scores</a>
+          <a class="btn" href="rules.html">Rules</a>
+        </div>
+      </div>
+      <div class="pill">Manual refresh</div>
+    </div>
 
-  <div style="margin: 10px 0;">
-    <label><b>Load predictions CSV:</b></label>
-    <input type="file" id="csvFile" accept=".csv" />
-    <span style="font-size:12px;opacity:.85;">
-      CSV headers: Name,Email,AFCChampion,NFCChampion,SuperBowlChampion
-    </span>
+    <div id="msg"></div>
+
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th class="name">Entrant</th>
+            <th>AFC Champion</th>
+            <th>NFC Champion</th>
+            <th>Super Bowl Champion</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
   </div>
-
-  <div id="msg" style="margin: 8px 0;"></div>
-
-  <table id="predTable">
-    <thead>
-      <tr>
-        <th class="name">Entrant</th>
-        <th>AFC Champion</th>
-        <th>NFC Champion</th>
-        <th>Super Bowl Champion</th>
-      </tr>
-    </thead>
-    <tbody id="tbody"></tbody>
-  </table>
 
 <script>
   const msgEl = document.getElementById("msg");
   const tbodyEl = document.getElementById("tbody");
-  const fileEl = document.getElementById("csvFile");
+
+  function splitCSVLine(line) {
+    const out = [];
+    let cur = "", inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQ && line[i+1] === '"') { cur += '"'; i++; }
+        else inQ = !inQ;
+      } else if (ch === ',' && !inQ) {
+        out.push(cur); cur = "";
+      } else cur += ch;
+    }
+    out.push(cur);
+    return out.map(x => x.trim());
+  }
 
   function parseCSV(text) {
-    const lines = text.trim().split(/\r?\n/);
+    const lines = text.replace(/\r/g, "").split("\n").filter(l => l.trim() !== "");
     if (lines.length < 2) return [];
-    const headers = lines[0].split(",").map(h => h.trim());
-    return lines.slice(1).filter(Boolean).map(line => {
-      const cols = line.split(",").map(c => c.trim());
+    const headers = splitCSVLine(lines[0]);
+    return lines.slice(1).map(line => {
+      const cols = splitCSVLine(line);
       const obj = {};
-      headers.forEach((h, i) => obj[h] = cols[i] ?? "");
+      headers.forEach((h, i) => obj[h] = (cols[i] ?? ""));
       return obj;
     });
   }
 
+  async function fetchTextOrNull(path) {
+    try {
+      const r = await fetch(path, { cache: "no-store" });
+      if (!r.ok) return null;
+      return await r.text();
+    } catch (e) { return null; }
+  }
+
   function render(rows) {
     tbodyEl.innerHTML = "";
-
     rows
-      .filter(r => (r.Name || "").trim() !== "")
-      .sort((a,b) => (a.Name || "").localeCompare(b.Name || ""))
+      .filter(r => String(r.Name || "").trim() !== "")
+      .sort((a,b) => String(a.Name||"").localeCompare(String(b.Name||"")))
       .forEach(r => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
-          <td class="name">${(r.Name || "").trim()}</td>
-          <td>${(r.AFCChampion || "").trim()}</td>
-          <td>${(r.NFCChampion || "").trim()}</td>
-          <td>${(r.SuperBowlChampion || "").trim()}</td>
+          <td class="name">${String(r.Name||"").trim()}</td>
+          <td>${String(r.AFCChampion||"").trim()}</td>
+          <td>${String(r.NFCChampion||"").trim()}</td>
+          <td>${String(r.SuperBowlChampion||"").trim()}</td>
         `;
         tbodyEl.appendChild(tr);
       });
   }
 
-  async function tryAutoLoad() {
-    msgEl.textContent = "Loading superbowl_picks.csv…";
-    try {
-      const text = await fetch("superbowl_picks.csv", { cache: "no-store" }).then(r => {
-        if (!r.ok) throw new Error("missing");
-        return r.text();
-      });
-      const rows = parseCSV(text);
-      render(rows);
-      msgEl.textContent = "Loaded superbowl_picks.csv.";
-    } catch (e) {
-      msgEl.textContent = "Upload superbowl_picks.csv to the repo or use the file picker above.";
+  async function main() {
+    msgEl.textContent = "Loading superbowl_predictions.csv…";
+    const text = await fetchTextOrNull("superbowl_predictions.csv");
+    if (!text) {
+      msgEl.textContent = "Missing superbowl_predictions.csv";
+      return;
     }
+    const rows = parseCSV(text);
+    render(rows);
+    msgEl.textContent = "Loaded superbowl_predictions.csv.";
   }
 
-  fileEl.addEventListener("change", (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      const rows = parseCSV(String(reader.result || ""));
-      render(rows);
-      msgEl.textContent = "Loaded from uploaded file.";
-    };
-    reader.readAsText(file);
+  main().catch(err => {
+    console.error(err);
+    msgEl.textContent = "Could not load predictions right now.";
   });
-
-  tryAutoLoad();
 </script>
-
 </body>
 </html>
