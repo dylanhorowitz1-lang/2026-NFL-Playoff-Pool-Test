@@ -143,29 +143,22 @@ const SCOREBOARD_URLS = (() => {
   }
 
 function isPlayoffEvent(ev) {
-  const isPostseason =
-    (ev.season?.type === 3) ||
-    String(ev.season?.slug || "").toLowerCase().includes("post");
+  const week = ev.week?.number;
 
-  // Combine likely fields where "Pro Bowl" might appear
-  const text = [
-    ev.name,
-    ev.shortName,
-    ev.competitions?.[0]?.shortName,
-    ev.competitions?.[0]?.notes?.[0]?.headline
-  ].map(x => String(x || "")).join(" ").toLowerCase();
+  // Hide Pro Bowl (Week 4)
+  if (week === 4) return false;
 
-  if (text.includes("pro bowl")) return false;
-
-  return isPostseason;
+  // Allow postseason weeks we care about
+  return week === 1 || week === 2 || week === 3 || week === 5;
   }
 
   function roundLabelFromWeek(weekNum) {
-    // NFL postseason: commonly 1=WC, 2=DIV, 3=CONF, 4=SB (best-effort)
+    // NFL postseason: commonly 1=WC, 2=DIV, 3=CONF, 4=PB, 5=SB (best-effort)
     if (weekNum === 1) return "Wild Card Round";
     if (weekNum === 2) return "Divisional Round";
     if (weekNum === 3) return "Conference Championships";
-    if (weekNum === 4) return "Super Bowl";
+    if (weekNum === 4) return "Pro Bowl";
+    if (weekNum === 5) return "Super Bowl";
     return `Playoffs (Week ${weekNum || "?"})`;
   }
 
