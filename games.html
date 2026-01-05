@@ -114,12 +114,14 @@ function yyyymmdd(d){
 }
 
 function buildScoreboardUrl(){
-  const start = new Date();          // today
-  const end = new Date();
-  end.setDate(start.getDate() + 45); // next 45 days
+  // FIXED START DATE (locked)
+  const start = new Date("2026-01-05T00:00:00-05:00"); // Jan 5, 2026 (ET)
+  const end = new Date(start);
+  end.setDate(start.getDate() + 40); // +40 days
 
   const range = `${yyyymmdd(start)}-${yyyymmdd(end)}`;
   return `${BASE_SCOREBOARD}?dates=${range}`;
+}
 }
 
 const SCOREBOARD_URLS = (() => {
@@ -143,9 +145,16 @@ const SCOREBOARD_URLS = (() => {
     throw new Error("Failed to fetch scoreboard");
   }
 
-  function isPlayoffEvent(ev) {
-    const isPostseason = (ev.season?.type === 3) || String(ev.season?.slug || "").includes("post");
-    return !!isPostseason;
+function isPlayoffEvent(ev) {
+  const isPostseason =
+    (ev.season?.type === 3) ||
+    String(ev.season?.slug || "").includes("post");
+
+  const name = String(ev.name || "").toLowerCase();
+
+  if (name.includes("Pro Bowl")) return false;
+
+  return isPostseason;
   }
 
   function roundLabelFromWeek(weekNum) {
