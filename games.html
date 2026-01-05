@@ -121,8 +121,6 @@ function buildScoreboardUrl(){
   const range = `${yyyymmdd(start)}-${yyyymmdd(end)}`;
   return `${BASE_SCOREBOARD}?dates=${range}`;
 }
-}
-
 const SCOREBOARD_URLS = (() => {
   const url = buildScoreboardUrl();
   return [
