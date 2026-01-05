@@ -108,12 +108,32 @@
     return `${BASE_SCOREBOARD}?dates=${range}`;
   }
 
-  const SCOREBOARD_URLS = (() => {
-    const url = buildScoreboardUrl();
-    return [
-      "https://api.codetabs.com/v1/proxy/?quest=" + encodeURIComponent(url),
-      "https://corsproxy.io/?" + encodeURIComponent(url)
-    ];
+// ESPN scoreboard (fixed playoff window) via proxy fallback
+const BASE_SCOREBOARD = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard";
+
+function yyyymmdd(d){
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,"0");
+  const day = String(d.getDate()).padStart(2,"0");
+  return `${y}${m}${day}`;
+}
+
+function buildScoreboardUrl(){
+  const start = new Date("2026-01-05T00:00:00-05:00");
+  const end = new Date(start);
+  end.setDate(start.getDate() + 40);
+  const range = `${yyyymmdd(start)}-${yyyymmdd(end)}`;
+  return `${BASE_SCOREBOARD}?dates=${range}`;
+}
+
+const SCOREBOARD_URLS = (() => {
+  const url = buildScoreboardUrl();
+  return [
+    "https://api.codetabs.com/v1/proxy/?quest=" + encodeURIComponent(url),
+    "https://corsproxy.io/?" + encodeURIComponent(url),
+    "https://api.allorigins.win/raw?url=" + encodeURIComponent(url)
+  ];
+})();
   })();
 
   const msgEl = document.getElementById("msg");
@@ -387,9 +407,14 @@
     const { map: linesById, order: lineOrder } = linesText ? parseLinesWithOrder(linesText) : { map: new Map(), order: [] };
 
     // Always load scoreboard so we can show matchup names even before picks arrive
+    let eventsById = new Map();
+    try {
     const data = await fetchJsonWithFallback(SCOREBOARD_URLS);
-    const eventsById = new Map();
-    (data.events || []).forEach(ev => { if (ev?.id) eventsById.set(String(ev.id), ev); });
+      (data.events || []).forEach(ev => { if (ev?.id) eventsById.set(String(ev.id), ev); });
+      } catch (e) {
+      console.error("Scoreboard fetch failed:", e);
+  // continue — page will still load using lines.csv + picks, just without matchup names
+}
 
     // Choose GameIDs:
     // 1) from picks file if present, else 2) from lines.csv order, else blanks
