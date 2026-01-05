@@ -104,15 +104,31 @@
   </div>
 
 <script>
-  const SCOREBOARD_URLS = [
-    "https://api.codetabs.com/v1/proxy/?quest=" + encodeURIComponent(
-      "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard"
-    ),
-    "https://corsproxy.io/?" + encodeURIComponent(
-      "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard"
-    )
-  ];
+  const BASE_SCOREBOARD = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard";
 
+function yyyymmdd(d){
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,"0");
+  const day = String(d.getDate()).padStart(2,"0");
+  return `${y}${m}${day}`;
+}
+
+function buildScoreboardUrl(){
+  const start = new Date();          // today
+  const end = new Date();
+  end.setDate(start.getDate() + 14); // next 14 days
+
+  const range = `${yyyymmdd(start)}-${yyyymmdd(end)}`;
+  return `${BASE_SCOREBOARD}?dates=${range}`;
+}
+
+const SCOREBOARD_URLS = (() => {
+  const url = buildScoreboardUrl();
+  return [
+    "https://api.codetabs.com/v1/proxy/?quest=" + encodeURIComponent(url),
+    "https://corsproxy.io/?" + encodeURIComponent(url)
+  ];
+})();
   const stampEl = document.getElementById("stamp");
   const contentEl = document.getElementById("content");
 
