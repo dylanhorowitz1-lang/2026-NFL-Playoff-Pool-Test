@@ -369,7 +369,7 @@
   }
 
   function renderTable(rows) {
-    rows.sort((a,b) => (b.total - a.total) || (a.tiebreaker - b.tiebreaker) || a.name.localeCompare(b.name));
+    rows.sort((a,b) => (b.total - a.total) || (a.tiebreaker - b.tiebreaker));
     tbodyEl.innerHTML = "";
     rows.forEach((r, idx) => {
       const tr = document.createElement("tr");
