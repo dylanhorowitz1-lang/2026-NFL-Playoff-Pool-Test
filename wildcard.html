@@ -318,7 +318,6 @@
 
     const rows = pickRows
       .filter(r => String(r.Name || "").trim() !== "")
-      .sort((a,b) => String(a.Name||"").localeCompare(String(b.Name||"")));
 
     rows.forEach(r => {
       const tr = document.createElement("tr");
