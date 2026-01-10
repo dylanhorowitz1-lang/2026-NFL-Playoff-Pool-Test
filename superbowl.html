@@ -147,14 +147,13 @@
     tbodyEl.innerHTML = "";
     rows
       .filter(r => String(r.Name || "").trim() !== "")
-      .sort((a,b) => String(a.Name||"").localeCompare(String(b.Name||"")))
       .forEach(r => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td class="name">${String(r.Name||"").trim()}</td>
-          <td>${String(r.AFCChampion||"").trim()}</td>
-          <td>${String(r.NFCChampion||"").trim()}</td>
-          <td>${String(r.SuperBowlChampion||"").trim()}</td>
+          <td>${String(r.AFC_Champion||"").trim()}</td>
+          <td>${String(r.NFC_Champion||"").trim()}</td>
+          <td>${String(r.Super_Bowl_Champion||"").trim()}</td>
         `;
         tbodyEl.appendChild(tr);
       });
