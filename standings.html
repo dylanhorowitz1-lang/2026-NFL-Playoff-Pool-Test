@@ -302,7 +302,6 @@
             if (side && side === correctSide) {
               s[`${prefix}_ats`] += weights.ats;
             } else {
-              // Tie-breaker miss amount (ATS pick only)
               let miss = 0;
               if (side === "home") miss = Math.max(0, -homeMargin);
               else if (side === "away") miss = Math.max(0, homeMargin);
@@ -319,6 +318,7 @@
       if (prefix === "wc")   s.wc_total   = s.wc_adv + s.wc_ats + s.wc_ou;
       if (prefix === "div")  s.div_total  = s.div_adv + s.div_ats + s.div_ou;
       if (prefix === "conf") s.conf_total = s.conf_adv + s.conf_ats + s.conf_ou;
+      if (prefix === "sb")   s.sb_game_total = (s.sb_adv||0) + (s.sb_ats||0) + (s.sb_ou||0);
     });
   }
 
@@ -343,9 +343,10 @@
       ensureEntrant(standings, name);
       const s = standings.get(name);
 
-      const pickAFC = String(r.AFCChampion || "").trim();
-      const pickNFC = String(r.NFCChampion || "").trim();
-      const pickSB  = String(r.SuperBowlChampion || "").trim();
+      // IMPORTANT: your CSV headers have spaces, so use bracket notation
+      const pickAFC = String(r["AFC Champion"] || "").trim();
+      const pickNFC = String(r["NFC Champion"] || "").trim();
+      const pickSB  = String(r["Super Bowl Champion"] || "").trim();
 
       const afcCorrect = champs.afcWinner && norm(pickAFC) === norm(champs.afcWinner);
       const nfcCorrect = champs.nfcWinner && norm(pickNFC) === norm(champs.nfcWinner);
@@ -365,6 +366,7 @@
       s.sb_total = sbGameTotal + sbPredTotal;
       s.total = (s.wc_total||0) + (s.div_total||0) + (s.conf_total||0) + (s.sb_total||0);
       delete s._sb_both_bonus;
+      delete s.sb_game_total;
     });
   }
 
@@ -378,16 +380,59 @@
         <td class="name">${r.name}</td>
 
         <td>${r.wc_adv}</td><td>${r.wc_ats}</td><td>${r.wc_ou}</td><td><b>${r.wc_total}</b></td>
-        <td>${r.div_adv}</td><td>${r.div_ats}</td><td>${r.div_ou}</td><td><b>${r.div_total}</b></td>
-        <td>${r.conf_adv}</td><td>${r.conf_ats}</td><td>${r.conf_ou}</td><td><b>${r.conf_total}</b></td>
 
-        <td>${r.sb_adv}</td><td>${r.sb_ats}</td><td>${r.sb_ou}</td>
-        <td>${r.sb_afc}</td><td>${r.sb_nfc}</td><td>${r.sb_champ}</td><td><b>${r.sb_total}</b></td>
+        <td class="future-round">${r.div_adv}</td><td class="future-round">${r.div_ats}</td><td class="future-round">${r.div_ou}</td><td class="future-round"><b>${r.div_total}</b></td>
+        <td class="future-round">${r.conf_adv}</td><td class="future-round">${r.conf_ats}</td><td class="future-round">${r.conf_ou}</td><td class="future-round"><b>${r.conf_total}</b></td>
+
+        <td class="future-round">${r.sb_adv}</td><td class="future-round">${r.sb_ats}</td><td class="future-round">${r.sb_ou}</td>
+        <td class="future-round">${r.sb_afc}</td><td class="future-round">${r.sb_nfc}</td><td class="future-round">${r.sb_champ}</td><td class="future-round"><b>${r.sb_total}</b></td>
 
         <td><b>${r.total}</b></td>
         <td>${Number(r.tiebreaker).toFixed(1).replace(/\.0$/, "")}</td>
       `;
       tbodyEl.appendChild(tr);
+    });
+  }
+
+  function initCollapse() {
+    // ensure hidden-col exists (in case CSS missed)
+    if (!document.getElementById("collapse-css")) {
+      const st = document.createElement("style");
+      st.id = "collapse-css";
+      st.textContent = `.hidden-col{display:none !important;}`;
+      document.head.appendChild(st);
+    }
+
+    const table = document.getElementById("tbl");
+    if (!table) return;
+
+    // insert one toggle button above the table (inside the same card)
+    let btn = document.getElementById("toggleFuture");
+    if (!btn) {
+      btn = document.createElement("button");
+      btn.className = "btn";
+      btn.id = "toggleFuture";
+      btn.type = "button";
+      btn.setAttribute("aria-pressed", "true"); // collapsed default
+      btn.textContent = "Show future rounds";
+      const card = table.closest(".card") || table.parentElement;
+      card.insertBefore(btn, table);
+    }
+
+    function setCollapsed(collapsed) {
+      document.querySelectorAll(".future-round").forEach(el => {
+        el.classList.toggle("hidden-col", collapsed);
+      });
+      btn.setAttribute("aria-pressed", String(collapsed));
+      btn.textContent = collapsed ? "Show future rounds" : "Hide future rounds";
+    }
+
+    // default collapsed
+    setCollapsed(true);
+
+    btn.addEventListener("click", () => {
+      const collapsed = btn.getAttribute("aria-pressed") === "true";
+      setCollapsed(!collapsed);
     });
   }
 
@@ -422,6 +467,7 @@
 
     finalizeTotals(standings);
     renderTable(Array.from(standings.values()));
+    initCollapse();
 
     const missing = [];
     if (!wcText) missing.push("wildcard_picks.csv");
@@ -436,7 +482,8 @@
       champs.sbWinner  ? `SB: ${champs.sbWinner}`  : "SB: TBD"
     ].join(" | ");
 
-    msgEl.textContent = (missing.length ? `Missing: ${missing.join(", ")}. ` : "All pick files loaded. ")
+    msgEl.textContent =
+      (missing.length ? `Missing: ${missing.join(", ")}. ` : "All pick files loaded. ")
       + champBits;
   }
 
@@ -444,115 +491,6 @@
     console.error(err);
     msgEl.textContent = "Could not load standings right now.";
   });
-  <script>
-/* ===== Collapse future rounds (Divisional + Conference + Super Bowl) =====
-   Drop-in: no need to add classes to every <th>/<td>.
-   It detects the header groups by text and hides those columns by default.
-*/
-(function () {
-  // 1) Make sure the CSS class exists (safe even if you already added it)
-  if (!document.getElementById("collapse-css")) {
-    const style = document.createElement("style");
-    style.id = "collapse-css";
-    style.textContent = `.hidden-col{display:none !important;}`;
-    document.head.appendChild(style);
-  }
-
-  // 2) Find your standings table
-  const table =
-    document.getElementById("standingsTable") ||
-    document.querySelector("table"); // fallback
-  if (!table || !table.tHead) return;
-
-  // 3) Insert ONE toggle button (if it doesn’t already exist)
-  let btn = document.getElementById("toggleFuture");
-  if (!btn) {
-    btn = document.createElement("button");
-    btn.className = "btn";
-    btn.id = "toggleFuture";
-    btn.type = "button";
-    btn.setAttribute("aria-pressed", "true"); // default collapsed
-    btn.textContent = "Show future rounds";
-
-    // Put it just above the table
-    const card = table.closest(".card") || table.parentElement;
-    if (card) card.insertBefore(btn, table);
-    else table.parentElement.insertBefore(btn, table);
-  }
-
-  // 4) Determine which column ranges are “future rounds” by scanning header group titles
-  // We look for a header row containing these phrases:
-  const futureGroupMatchers = [/divisional/i, /conference/i, /super bowl/i];
-
-  function getFutureColumnIndices() {
-    // pick the first header row that contains any future group labels
-    const rows = Array.from(table.tHead.rows || []);
-    let targetRow = null;
-
-    for (const r of rows) {
-      const cells = Array.from(r.cells || []);
-      if (cells.some(c => futureGroupMatchers.some(rx => rx.test((c.textContent || "").trim())))) {
-        targetRow = r;
-        break;
-      }
-    }
-    if (!targetRow) return new Set();
-
-    const hidden = new Set();
-    let col = 0;
-
-    for (const cell of Array.from(targetRow.cells)) {
-      const span = cell.colSpan || 1;
-      const txt = (cell.textContent || "").trim();
-
-      const isFuture = futureGroupMatchers.some(rx => rx.test(txt));
-      if (isFuture) {
-        for (let i = col; i < col + span; i++) hidden.add(i);
-      }
-      col += span;
-    }
-    return hidden;
-  }
-
-  const futureCols = getFutureColumnIndices();
-
-  // 5) Hide/show cells robustly (handles colspans)
-  function applyCollapsed(collapsed) {
-    const hideSet = futureCols;
-    const allRows = [
-      ...Array.from(table.tHead?.rows || []),
-      ...Array.from(table.tBodies?.[0]?.rows || [])
-    ];
-
-    for (const tr of allRows) {
-      let col = 0;
-      for (const cell of Array.from(tr.cells || [])) {
-        const span = cell.colSpan || 1;
-        let shouldHide = false;
-
-        for (let i = col; i < col + span; i++) {
-          if (hideSet.has(i)) { shouldHide = true; break; }
-        }
-
-        cell.classList.toggle("hidden-col", collapsed && shouldHide);
-        col += span;
-      }
-    }
-
-    btn.setAttribute("aria-pressed", String(collapsed));
-    btn.textContent = collapsed ? "Show future rounds" : "Hide future rounds";
-  }
-
-  // Default: collapsed
-  applyCollapsed(true);
-
-  // Toggle behavior
-  btn.addEventListener("click", () => {
-    const collapsed = btn.getAttribute("aria-pressed") === "true";
-    applyCollapsed(!collapsed);
-  });
-})();
-</script>
 </script>
 </body>
 </html>
