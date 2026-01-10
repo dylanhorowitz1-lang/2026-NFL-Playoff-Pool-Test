@@ -389,8 +389,14 @@ const SCOREBOARD_URLS = (() => {
 
     // Always load scoreboard so we can show matchup names even before picks arrive
     const data = await fetchJsonWithFallback(SCOREBOARD_URLS);
+
     const eventsById = new Map();
-    (data.events || []).forEach(ev => { if (ev?.id) eventsById.set(String(ev.id), ev); });
+    (data.events || []).forEach(ev => {
+      // index by BOTH ids (some pages use event.id, others use competition.id)
+      if (ev?.id) eventsById.set(String(ev.id), ev);
+      const compId = ev?.competitions?.[0]?.id;
+      if (compId) eventsById.set(String(compId), ev);
+    });
 
     // Choose GameIDs:
     // 1) from picks file if present, else 2) from lines.csv order, else blanks
@@ -401,12 +407,12 @@ const SCOREBOARD_URLS = (() => {
       pickRows = parseCSV(picksText);
       gameIds = extractGameIdsWide(pickRows);
     } else if (lineOrder.length) {
-      gameIds = lineOrder.slice(0,6);
+      gameIds = lineOrder.slice(0, 6);
     }
 
     const matchups = gameIds.map((gid, idx) => {
       const ev = gid ? eventsById.get(gid) : null;
-      if (!ev) return `Game ${idx+1}`;
+      if (!ev) return `Game ${idx + 1}`;
       return matchupLabel(eventToInfo(ev));
     });
 
@@ -420,7 +426,9 @@ const SCOREBOARD_URLS = (() => {
     renderResults(gameIds, eventsById, linesById);
     renderGrid(pickRows, gameIds, eventsById, linesById);
 
-    msgEl.textContent = linesText ? "Loaded wildcard_picks.csv and lines.csv." : "Loaded picks. Missing lines.csv.";
+    msgEl.textContent = linesText
+      ? "Loaded wildcard_picks.csv and lines.csv."
+      : "Loaded picks. Missing lines.csv.";
   }
 
   main().catch(err => {
