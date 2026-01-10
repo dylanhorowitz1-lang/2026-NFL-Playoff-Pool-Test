@@ -443,6 +443,115 @@
     console.error(err);
     msgEl.textContent = "Could not load standings right now.";
   });
+  <script>
+/* ===== Collapse future rounds (Divisional + Conference + Super Bowl) =====
+   Drop-in: no need to add classes to every <th>/<td>.
+   It detects the header groups by text and hides those columns by default.
+*/
+(function () {
+  // 1) Make sure the CSS class exists (safe even if you already added it)
+  if (!document.getElementById("collapse-css")) {
+    const style = document.createElement("style");
+    style.id = "collapse-css";
+    style.textContent = `.hidden-col{display:none !important;}`;
+    document.head.appendChild(style);
+  }
+
+  // 2) Find your standings table
+  const table =
+    document.getElementById("standingsTable") ||
+    document.querySelector("table"); // fallback
+  if (!table || !table.tHead) return;
+
+  // 3) Insert ONE toggle button (if it doesn’t already exist)
+  let btn = document.getElementById("toggleFuture");
+  if (!btn) {
+    btn = document.createElement("button");
+    btn.className = "btn";
+    btn.id = "toggleFuture";
+    btn.type = "button";
+    btn.setAttribute("aria-pressed", "true"); // default collapsed
+    btn.textContent = "Show future rounds";
+
+    // Put it just above the table
+    const card = table.closest(".card") || table.parentElement;
+    if (card) card.insertBefore(btn, table);
+    else table.parentElement.insertBefore(btn, table);
+  }
+
+  // 4) Determine which column ranges are “future rounds” by scanning header group titles
+  // We look for a header row containing these phrases:
+  const futureGroupMatchers = [/divisional/i, /conference/i, /super bowl/i];
+
+  function getFutureColumnIndices() {
+    // pick the first header row that contains any future group labels
+    const rows = Array.from(table.tHead.rows || []);
+    let targetRow = null;
+
+    for (const r of rows) {
+      const cells = Array.from(r.cells || []);
+      if (cells.some(c => futureGroupMatchers.some(rx => rx.test((c.textContent || "").trim())))) {
+        targetRow = r;
+        break;
+      }
+    }
+    if (!targetRow) return new Set();
+
+    const hidden = new Set();
+    let col = 0;
+
+    for (const cell of Array.from(targetRow.cells)) {
+      const span = cell.colSpan || 1;
+      const txt = (cell.textContent || "").trim();
+
+      const isFuture = futureGroupMatchers.some(rx => rx.test(txt));
+      if (isFuture) {
+        for (let i = col; i < col + span; i++) hidden.add(i);
+      }
+      col += span;
+    }
+    return hidden;
+  }
+
+  const futureCols = getFutureColumnIndices();
+
+  // 5) Hide/show cells robustly (handles colspans)
+  function applyCollapsed(collapsed) {
+    const hideSet = futureCols;
+    const allRows = [
+      ...Array.from(table.tHead?.rows || []),
+      ...Array.from(table.tBodies?.[0]?.rows || [])
+    ];
+
+    for (const tr of allRows) {
+      let col = 0;
+      for (const cell of Array.from(tr.cells || [])) {
+        const span = cell.colSpan || 1;
+        let shouldHide = false;
+
+        for (let i = col; i < col + span; i++) {
+          if (hideSet.has(i)) { shouldHide = true; break; }
+        }
+
+        cell.classList.toggle("hidden-col", collapsed && shouldHide);
+        col += span;
+      }
+    }
+
+    btn.setAttribute("aria-pressed", String(collapsed));
+    btn.textContent = collapsed ? "Show future rounds" : "Hide future rounds";
+  }
+
+  // Default: collapsed
+  applyCollapsed(true);
+
+  // Toggle behavior
+  btn.addEventListener("click", () => {
+    const collapsed = btn.getAttribute("aria-pressed") === "true";
+    applyCollapsed(!collapsed);
+  });
+})();
+</script>
 </script>
 </body>
 </html>
