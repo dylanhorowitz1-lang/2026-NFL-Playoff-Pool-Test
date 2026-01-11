@@ -4,109 +4,145 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Standings</title>
- <style>
-  :root{
-    --bg:#0b1020;
-    --card:#111a33;
-    --card2:#0f1730;
-    --text:#e8ecff;
-    --muted:#a9b3da;
-    --accent:#5eead4;
-    --border: rgba(255,255,255,.12);
-    --shadow: 0 12px 30px rgba(0,0,0,.35);
-  }
-  *{box-sizing:border-box}
-  body{
-    margin:0;
-    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
-    background: radial-gradient(1200px 500px at 20% -10%, rgba(94,234,212,.18), transparent 60%),
-                radial-gradient(900px 500px at 100% 0%, rgba(99,102,241,.22), transparent 55%),
-                var(--bg);
-    color:var(--text);
-    min-height:100vh;
-  }
-  .wrap{max-width:1200px;margin:0 auto;padding:28px 16px 44px}
-  .top{
-    display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;
-    padding:18px 18px 10px;border:1px solid var(--border);border-radius:18px;background:rgba(17,26,51,.55);
-    box-shadow: var(--shadow); backdrop-filter: blur(10px);
-  }
-  h1{margin:0;font-size:28px;letter-spacing:.2px}
-  .sub{margin:6px 0 0;color:var(--muted);max-width:860px;line-height:1.45}
-  .pill{
-    display:inline-flex;align-items:center;gap:8px;
-    padding:8px 10px;border:1px solid var(--border);border-radius:999px;
-    color:var(--muted);font-size:12px;background:rgba(15,23,48,.55)
-  }
-  .nav{
-    margin-top:12px;
-    display:flex;gap:10px;flex-wrap:wrap;
-  }
-  .btn{
-    display:inline-flex;align-items:center;gap:8px;
-    padding:10px 12px;border-radius:12px;
-    border:1px solid var(--border);
-    background: rgba(15,23,48,.65);
-    color:var(--text);
-    text-decoration:none;
-    transition: transform .12s ease, border-color .12s ease;
-  }
-  .btn:hover{transform: translateY(-1px);border-color: rgba(94,234,212,.45)}
-  .card{
-    margin-top:18px;
-    border:1px solid var(--border);
-    border-radius:18px;
-    background: linear-gradient(180deg, rgba(17,26,51,.75), rgba(15,23,48,.65));
-    box-shadow: var(--shadow);
-    padding:14px;
-    overflow-x:auto;
-  }
+  <style>
+    :root{
+      --bg:#0b1020;
+      --card:#111a33;
+      --card2:#0f1730;
+      --text:#e8ecff;
+      --muted:#a9b3da;
+      --accent:#5eead4;
+      --border: rgba(255,255,255,.12);
+      --shadow: 0 12px 30px rgba(0,0,0,.35);
 
-  /* Toggle support */
-  .hidden-col{ display:none !important; }
+      --grid: rgba(255,255,255,.18);
+      --sep: rgba(255,255,255,.22);
+      --totalBorder: rgba(255,255,255,.40);
+      --subtotalTint: rgba(94,234,212,.10);
+      --totalTint: rgba(99,102,241,.16);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background: radial-gradient(1200px 500px at 20% -10%, rgba(94,234,212,.18), transparent 60%),
+                  radial-gradient(900px 500px at 100% 0%, rgba(99,102,241,.22), transparent 55%),
+                  var(--bg);
+      color:var(--text);
+      min-height:100vh;
+    }
+    .wrap{max-width:1200px;margin:0 auto;padding:28px 16px 44px}
+    .top{
+      display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;
+      padding:18px 18px 10px;border:1px solid var(--border);border-radius:18px;background:rgba(17,26,51,.55);
+      box-shadow: var(--shadow); backdrop-filter: blur(10px);
+    }
+    h1{margin:0;font-size:28px;letter-spacing:.2px}
+    .sub{margin:6px 0 0;color:var(--muted);max-width:860px;line-height:1.45}
+    .pill{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:8px 10px;border:1px solid var(--border);border-radius:999px;
+      color:var(--muted);font-size:12px;background:rgba(15,23,48,.55)
+    }
+    .nav{margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;}
+    .btn{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:10px 12px;border-radius:12px;
+      border:1px solid var(--border);
+      background: rgba(15,23,48,.65);
+      color:var(--text);
+      text-decoration:none;
+      transition: transform .12s ease, border-color .12s ease;
+      cursor:pointer;
+    }
+    .btn:hover{transform: translateY(-1px);border-color: rgba(94,234,212,.45)}
+    .card{
+      margin-top:18px;border:1px solid var(--border);border-radius:18px;
+      background: linear-gradient(180deg, rgba(17,26,51,.75), rgba(15,23,48,.65));
+      box-shadow: var(--shadow);padding:14px;overflow-x:auto;
+    }
 
-  /* Table (kept, lightly themed) */
-  table { border-collapse: collapse; width: 100%; min-width: 1050px; }
-  th, td { border: 1px solid rgba(255,255,255,.18); padding: 6px; text-align: center; }
-  th.name, td.name { text-align: left; font-weight: bold; white-space: nowrap; }
-  thead th { position: sticky; top: 0; background: rgba(15,23,48,.95); z-index: 2; }
+    /* Toggle support */
+    .hidden-col{ display:none !important; }
 
-  #msg { color: var(--muted); font-size: 12px; margin-top: 10px; }
-   /* === Emphasis for subtotals + totals === */
-#tbl tbody td:nth-child(6),
-#tbl tbody td:nth-child(10),
-#tbl tbody td:nth-child(14),
-#tbl tbody td:nth-child(21) {
-  background: rgba(94,234,212,.10);
-  font-weight: 800;
-}
+    /* ===== TABLE ===== */
+    #tbl{
+      border-collapse: collapse;
+      width: 100%;
+      min-width: 1200px;
+      table-layout: fixed; /* makes widths predictable */
+    }
+    #tbl th, #tbl td{
+      border: 1px solid var(--grid);
+      padding: 7px 8px;
+      text-align: center;
+      vertical-align: middle;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 13px;
+    }
+    #tbl th.name, #tbl td.name{
+      text-align: left;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    #tbl thead th{
+      position: sticky;
+      top: 0;
+      background: rgba(15,23,48,.95);
+      z-index: 2;
+    }
 
-#tbl tbody td:nth-child(22) {
-  background: rgba(99,102,241,.14);
-  font-weight: 900;
-  border-left: 2px solid rgba(255,255,255,.28);
-}
+    /* Column widths (even + predictable) via <colgroup> */
+    #tbl col.c-rank{ width: 44px; }
+    #tbl col.c-name{ width: 180px; }
 
-/* tighten Tie-breaker column */
-#tbl thead th:last-child,
-#tbl tbody td:last-child {
-  width: 70px;
-  font-size: 12px;
-  color: rgba(232,236,255,.85);
-}
+    /* Pick columns */
+    #tbl col.c-adv{ width: 72px; }
+    #tbl col.c-spread{ width: 72px; }
+    #tbl col.c-ou{ width: 54px; }
 
-/* Optional: subtle separators between round blocks */
-#tbl thead th:nth-child(6),
-#tbl tbody td:nth-child(6),
-#tbl thead th:nth-child(10),
-#tbl tbody td:nth-child(10),
-#tbl thead th:nth-child(14),
-#tbl tbody td:nth-child(14),
-#tbl thead th:nth-child(21),
-#tbl tbody td:nth-child(21) {
-  border-right: 2px solid rgba(255,255,255,.22);
-}
-</style>
+    /* Subtotals */
+    #tbl col.c-subtotal{ width: 70px; }
+
+    /* SB prediction cols */
+    #tbl col.c-pred{ width: 78px; }
+
+    /* Total + Tiebreaker */
+    #tbl col.c-total{ width: 82px; }
+    #tbl col.c-tb{ width: 60px; }
+
+    /* Separators after each round subtotal */
+    .block-end{
+      border-right: 2px solid var(--sep) !important;
+    }
+
+    /* Subtotal emphasis */
+    .subtotal{
+      background: var(--subtotalTint);
+      font-weight: 800;
+    }
+
+    /* TOTAL column emphasis: bold border around the whole column (header + body) */
+    .totalcol{
+      background: var(--totalTint);
+      font-weight: 900;
+      border-left: 3px solid var(--totalBorder) !important;
+      border-right: 3px solid var(--totalBorder) !important;
+    }
+    /* Cap the total column so it looks boxed */
+    #tbl thead .totalcol{ border-top: 3px solid var(--totalBorder) !important; }
+    #tbl tbody tr:last-child .totalcol{ border-bottom: 3px solid var(--totalBorder) !important; }
+
+    /* Tighten tiebreaker */
+    .tbcol{
+      font-size: 12px;
+      color: rgba(232,236,255,.85);
+    }
+
+    #msg{ color:var(--muted); font-size:12px; margin-top:10px; }
+  </style>
 </head>
 <body>
   <div class="wrap">
@@ -127,6 +163,30 @@
 
     <div class="card">
       <table id="tbl">
+        <!-- widths -->
+        <colgroup>
+          <col class="c-rank">
+          <col class="c-name">
+
+          <!-- WC: adv, spread, ou, subtotal -->
+          <col class="c-adv"><col class="c-spread"><col class="c-ou"><col class="c-subtotal">
+
+          <!-- DIV -->
+          <col class="c-adv"><col class="c-spread"><col class="c-ou"><col class="c-subtotal">
+
+          <!-- CONF -->
+          <col class="c-adv"><col class="c-spread"><col class="c-ou"><col class="c-subtotal">
+
+          <!-- SB game: adv, spread, ou -->
+          <col class="c-adv"><col class="c-spread"><col class="c-ou">
+
+          <!-- SB preds: AFC, NFC, Champ, Total SB -->
+          <col class="c-pred"><col class="c-pred"><col class="c-pred"><col class="c-subtotal">
+
+          <!-- Total + TB -->
+          <col class="c-total"><col class="c-tb">
+        </colgroup>
+
         <thead>
           <tr>
             <th rowspan="2">Rank</th>
@@ -137,22 +197,27 @@
             <th colspan="4" class="future-round">Conference Championships</th>
             <th colspan="7" class="future-round">Super Bowl</th>
 
-            <th rowspan="2">Total</th>
-            <th rowspan="2">Tie-breaker</th>
+            <th rowspan="2" class="totalcol">Total</th>
+            <th rowspan="2" class="tbcol">Tie-breaker</th>
           </tr>
 
           <tr>
-            <th>Adv</th><th>Spread</th><th>O/U</th><th>Total WC</th>
-            <th class="future-round">Adv</th><th class="future-round">Spread</th><th class="future-round">O/U</th><th class="future-round">Total DIV</th>
-            <th class="future-round">Adv</th><th class="future-round">Spread</th><th class="future-round">O/U</th><th class="future-round">Total CONF</th>
+            <th>Adv</th><th>Spread</th><th>O/U</th><th class="subtotal block-end">Total WC</th>
+
+            <th class="future-round">Adv</th><th class="future-round">Spread</th><th class="future-round">O/U</th><th class="future-round subtotal block-end">Total DIV</th>
+
+            <th class="future-round">Adv</th><th class="future-round">Spread</th><th class="future-round">O/U</th><th class="future-round subtotal block-end">Total CONF</th>
+
             <th class="future-round">Adv</th><th class="future-round">Spread</th><th class="future-round">O/U</th>
-            <th class="future-round">AFC</th><th class="future-round">NFC</th><th class="future-round">SB Champ</th><th class="future-round">Total SB</th>
+            <th class="future-round">AFC</th><th class="future-round">NFC</th><th class="future-round">SB Champ</th><th class="future-round subtotal block-end">Total SB</th>
           </tr>
         </thead>
+
         <tbody id="tbody"></tbody>
       </table>
     </div>
   </div>
+
 <script>
 (() => {
   "use strict";
@@ -423,15 +488,32 @@
         <td>${rank}</td>
         <td class="name">${r.name}</td>
 
-        <td>${r.wc_adv}</td><td>${r.wc_ats}</td><td>${r.wc_ou}</td><td><b>${r.wc_total}</b></td>
-        <td>${r.div_adv}</td><td>${r.div_ats}</td><td>${r.div_ou}</td><td><b>${r.div_total}</b></td>
-        <td>${r.conf_adv}</td><td>${r.conf_ats}</td><td>${r.conf_ou}</td><td><b>${r.conf_total}</b></td>
+        <td>${r.wc_adv}</td>
+        <td>${r.wc_ats}</td>
+        <td>${r.wc_ou}</td>
+        <td class="subtotal block-end">${r.wc_total}</td>
 
-        <td>${r.sb_adv}</td><td>${r.sb_ats}</td><td>${r.sb_ou}</td>
-        <td>${r.sb_afc}</td><td>${r.sb_nfc}</td><td>${r.sb_champ}</td><td><b>${r.sb_total}</b></td>
+        <td class="future-round">${r.div_adv}</td>
+        <td class="future-round">${r.div_ats}</td>
+        <td class="future-round">${r.div_ou}</td>
+        <td class="future-round subtotal block-end">${r.div_total}</td>
 
-        <td><b>${r.total}</b></td>
-        <td>${Number(r.tiebreaker).toFixed(1).replace(/\.0$/, "")}</td>
+        <td class="future-round">${r.conf_adv}</td>
+        <td class="future-round">${r.conf_ats}</td>
+        <td class="future-round">${r.conf_ou}</td>
+        <td class="future-round subtotal block-end">${r.conf_total}</td>
+
+        <td class="future-round">${r.sb_adv}</td>
+        <td class="future-round">${r.sb_ats}</td>
+        <td class="future-round">${r.sb_ou}</td>
+
+        <td class="future-round">${r.sb_afc}</td>
+        <td class="future-round">${r.sb_nfc}</td>
+        <td class="future-round">${r.sb_champ}</td>
+        <td class="future-round subtotal block-end">${r.sb_total}</td>
+
+        <td class="totalcol">${r.total}</td>
+        <td class="tbcol">${Number(r.tiebreaker).toFixed(1).replace(/\.0$/, "")}</td>
       `;
       tbodyEl.appendChild(tr);
     });
@@ -440,13 +522,6 @@
   // ===== Collapse future rounds (Divisional + Conference + Super Bowl) =====
   function setupFutureCollapse() {
     if (!tableEl || !tableEl.tHead) return;
-
-    if (!document.getElementById("collapse-css")) {
-      const style = document.createElement("style");
-      style.id = "collapse-css";
-      style.textContent = `.hidden-col{display:none !important;}`;
-      document.head.appendChild(style);
-    }
 
     let btn = document.getElementById("toggleFuture");
     if (!btn) {
