@@ -160,13 +160,11 @@
     return `${y}${m}${day}`;
   }
 
-  function buildScoreboardUrl(){
-    // IMPORTANT: include past days so completed games still show up
-    const start = new Date();
-    start.setDate(start.getDate() - 10); // 10 days back
-
-    const end = new Date();
-    end.setDate(end.getDate() + 10);     // 10 days forward
+function buildScoreboardUrl(){
+  // LOCKED playoff window (change these 2 dates once per season)
+  const range = "20260101-20260218"; // YYYYMMDD-YYYYMMDD
+  return `${BASE_SCOREBOARD}?dates=${range}`;
+}
 
     const range = `${yyyymmdd(start)}-${yyyymmdd(end)}`;
     return `${BASE_SCOREBOARD}?dates=${range}`;
