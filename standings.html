@@ -463,7 +463,7 @@
       ];
 
       for (const tr of allRows) {
-        let col = 0;
+        let col = (tr.parentElement === tableEl.tHead && tr.rowIndex === 1) ? 2 : 0;
         for (const cell of Array.from(tr.cells || [])) {
           const span = cell.colSpan || 1;
           let shouldHide = false;
