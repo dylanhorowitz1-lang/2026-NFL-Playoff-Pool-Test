@@ -48,12 +48,20 @@
       transition: transform .12s ease, border-color .12s ease;
     }
     .btn:hover{transform: translateY(-1px);border-color: rgba(94,234,212,.45)}
+
+    /* IMPORTANT CHANGE:
+       The CARD no longer has overflow. Sticky headers work again. */
     .card{
       margin-top:18px;border:1px solid var(--border);border-radius:18px;
       background: linear-gradient(180deg, rgba(17,26,51,.75), rgba(15,23,48,.65));
-      box-shadow: var(--shadow);padding:14px;
+      box-shadow: var(--shadow);
+      padding:14px;
+    }
+
+    /* Horizontal scrolling lives here instead */
+    .tableScroll{
       overflow-x:auto;
-      overflow-y:visible; /* IMPORTANT: sticky header works on page scroll */
+      overflow-y:visible;
     }
 
     /* Table */
@@ -99,17 +107,15 @@
 
     #msg { color: var(--muted); font-size: 12px; margin-top: 10px; }
 
-    /* ===== Sticky header rows =====
-       We'll set TOP values in JS (because there are 4 header rows).
-    */
+    /* Sticky header rows (JS sets per-row top offsets) */
     #picksTable thead th{
       position: sticky;
-      top: 0; /* JS will override per-row */
+      top: 0;
       background: rgba(15,23,48,.95);
       z-index: 10;
     }
 
-    /* ===== Sticky first column ONLY for BODY rows ===== */
+    /* Sticky first column ONLY for body rows */
     #picksTable tbody td.sticky-first-col{
       position: sticky;
       left: 0;
@@ -138,25 +144,26 @@
     <div id="msg"></div>
 
     <div class="card">
-      <table id="picksTable">
-        <colgroup>
-          <col class="c-name">
-          <col class="c-adv"><col class="c-ats"><col class="c-ou">
-          <col class="c-adv"><col class="c-ats"><col class="c-ou">
-          <col class="c-adv"><col class="c-ats"><col class="c-ou">
-          <col class="c-adv"><col class="c-ats"><col class="c-ou">
-          <col class="c-adv"><col class="c-ats"><col class="c-ou">
-          <col class="c-adv"><col class="c-ats"><col class="c-ou">
-        </colgroup>
+      <div class="tableScroll">
+        <table id="picksTable">
+          <colgroup>
+            <col class="c-name">
+            <col class="c-adv"><col class="c-ats"><col class="c-ou">
+            <col class="c-adv"><col class="c-ats"><col class="c-ou">
+            <col class="c-adv"><col class="c-ats"><col class="c-ou">
+            <col class="c-adv"><col class="c-ats"><col class="c-ou">
+            <col class="c-adv"><col class="c-ats"><col class="c-ou">
+            <col class="c-adv"><col class="c-ats"><col class="c-ou">
+          </colgroup>
 
-        <thead id="thead"></thead>
-        <tbody id="tbody"></tbody>
-      </table>
+          <thead id="thead"></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 
 <script>
-  // ESPN scoreboard via proxy fallback (WIDE window: past + future)
   const BASE_SCOREBOARD = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard";
 
   function yyyymmdd(d){
@@ -169,10 +176,8 @@
   function buildScoreboardUrl(){
     const start = new Date();
     start.setDate(start.getDate() - 10);
-
     const end = new Date();
     end.setDate(end.getDate() + 10);
-
     const range = `${yyyymmdd(start)}-${yyyymmdd(end)}`;
     return `${BASE_SCOREBOARD}?dates=${range}`;
   }
@@ -240,7 +245,6 @@
     } catch (e) { return null; }
   }
 
-  // Lines: map GameID -> {homeSpread,total} AND preserve order from file
   function parseLinesWithOrder(linesText) {
     const rows = parseCSV(linesText);
     const map = new Map();
@@ -456,11 +460,10 @@
     return ids;
   }
 
-  // Sticky header: set correct top offset per THEAD row (all columns)
+  // Multi-row sticky header: compute top offsets per row
   function applyStickyHeaderOffsets() {
     const table = document.getElementById("picksTable");
     if (!table) return;
-
     const thead = table.querySelector("thead");
     if (!thead) return;
 
@@ -471,7 +474,7 @@
       const h = tr.getBoundingClientRect().height || 0;
       Array.from(tr.cells || []).forEach(th => {
         th.style.top = top + "px";
-        th.style.zIndex = String(15 - rowIndex);
+        th.style.zIndex = String(20 - rowIndex);
       });
       top += h;
     });
@@ -518,7 +521,6 @@
     if (!picksText) {
       msgEl.textContent = (msgEl.textContent ? msgEl.textContent + " " : "") +
         "No picks yet (missing wildcard_picks.csv).";
-
       setTimeout(applyStickyHeaderOffsets, 0);
       window.addEventListener("resize", () => setTimeout(applyStickyHeaderOffsets, 0));
       return;
