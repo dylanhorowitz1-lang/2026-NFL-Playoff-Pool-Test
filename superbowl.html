@@ -171,7 +171,16 @@
   const ELIMINATED_TEAMS = [
       "Jacksonville Jaguars", "Pittsburgh Steelers", "Los Angeles Chargers", "Philadelphia Eagles", "Carolina Panthers", "Green Bay Packers"
   ];
+    function isEliminated(teamName) {
+    const t = String(teamName || "").trim().toLowerCase();
+      if (!t) return false;
 
+  // If your list is empty, nothing should be red
+  if (!Array.isArray(ELIMINATED_TEAMS) || ELIMINATED_TEAMS.length === 0) return false;
+
+  return ELIMINATED_TEAMS.some(x => String(x || "").trim().toLowerCase() === t);
+}
+  
   // =========================
   // RESULTS (TBD now)
   // Fill these in later when known
