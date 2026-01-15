@@ -51,17 +51,17 @@
     .card{
       margin-top:18px;border:1px solid var(--border);border-radius:18px;
       background: linear-gradient(180deg, rgba(17,26,51,.75), rgba(15,23,48,.65));
-      box-shadow: var(--shadow);
-      padding:14px;
-      overflow-x:auto; /* horizontal scroll container */
+      box-shadow: var(--shadow);padding:14px;
+      overflow-x:auto;
+      overflow-y:visible; /* IMPORTANT: lets sticky header rows work while page scrolls */
     }
 
     /* Table */
     table{
       border-collapse: collapse;
       width: 100%;
-      min-width: 1400px;
-      table-layout: fixed;
+      min-width: 1400px;     /* more room for full team names */
+      table-layout: fixed;   /* keep widths consistent */
     }
 
     /* Column sizing: Adv + Spread equal, O/U smaller */
@@ -77,7 +77,7 @@
       vertical-align: middle;
       white-space: nowrap;
       overflow: hidden;
-      text-overflow: clip;
+      text-overflow: clip; /* don't add Los... unless absolutely needed */
       font-size: 13px;
     }
     th.name, td.name{
@@ -107,7 +107,7 @@
 
     #msg { color: var(--muted); font-size: 12px; margin-top: 10px; }
 
-    /* ===== STICKY FIRST COLUMN ===== */
+    /* ===== Sticky first column ===== */
     .sticky-first-col{
       position: sticky;
       left: 0;
@@ -119,9 +119,9 @@
        - first column header intersection: highest of all
        - first column body: above other body cells
     */
-    #picksTable thead th{ z-index: 10; }
+    #picksTable thead th{ z-index: 10; background: rgba(15,23,48,.95); }
     #picksTable tbody td.sticky-first-col{ z-index: 6; }
-    #picksTable thead th.sticky-first-col{ z-index: 12; }
+    #picksTable thead th.sticky-first-col{ z-index: 20; }
   </style>
 </head>
 
@@ -145,6 +145,7 @@
 
     <div class="card">
       <table id="picksTable">
+        <!-- Enforce column widths: Name + (Adv, Spread, O/U) * 6 -->
         <colgroup>
           <col class="c-name">
           <col class="c-adv"><col class="c-ats"><col class="c-ou">
@@ -173,11 +174,12 @@
   }
 
   function buildScoreboardUrl(){
+    // IMPORTANT: include past days so completed games still show up
     const start = new Date();
-    start.setDate(start.getDate() - 10);
+    start.setDate(start.getDate() - 10); // 10 days back
 
     const end = new Date();
-    end.setDate(end.getDate() + 10);
+    end.setDate(end.getDate() + 10);     // 10 days forward
 
     const range = `${yyyymmdd(start)}-${yyyymmdd(end)}`;
     return `${BASE_SCOREBOARD}?dates=${range}`;
@@ -246,6 +248,7 @@
     } catch (e) { return null; }
   }
 
+  // Lines: map GameID -> {homeSpread,total} AND preserve order from file
   function parseLinesWithOrder(linesText) {
     const rows = parseCSV(linesText);
     const map = new Map();
@@ -298,6 +301,7 @@
   }
 
   function buildHeaders(matchups, gameIds, eventsById, linesById) {
+    // Row 1: Game matchups
     let row1 = `<tr><th class="name">Game</th>`;
     matchups.forEach((m, idx) => {
       const sepClass = (idx < matchups.length - 1) ? "sep" : "";
@@ -305,6 +309,7 @@
     });
     row1 += `</tr>`;
 
+    // Row 2: Lines
     let row2 = `<tr><th class="name">Lines</th>`;
     gameIds.forEach((gid, idx) => {
       const sepClass = (idx < gameIds.length - 1) ? "sep" : "";
@@ -331,6 +336,7 @@
     });
     row2 += `</tr>`;
 
+    // Row 3: Results
     let row3 = `<tr><th class="name">Results</th>`;
     for (let i = 1; i <= 6; i++) {
       const sepClass = (i < 6) ? "sep" : "";
@@ -342,6 +348,7 @@
     }
     row3 += `</tr>`;
 
+    // Row 4: Pick labels
     let row4 = `<tr><th class="name">Name</th>`;
     for (let i = 1; i <= 6; i++) {
       const sepClass = (i < 6) ? "sep" : "";
@@ -461,32 +468,39 @@
     return ids;
   }
 
-  // ===== STICKY HELPERS (first column + 4 header rows) =====
-  function applyStickyFirstColumnAndHeaderRows() {
+  // ===== Sticky helpers: first column + 4 header rows =====
+  function applySticky() {
     const table = document.getElementById("picksTable");
     if (!table) return;
 
-    // 1) First column sticky (thead + tbody)
+    // sticky first column (thead + tbody)
     table.querySelectorAll("tr").forEach(tr => {
       const cell0 = tr.cells && tr.cells[0];
       if (cell0) cell0.classList.add("sticky-first-col");
     });
 
-    // 2) Multi-row sticky header: set correct top offset per THEAD row
+    // multi-row sticky header: set correct top offset per THEAD row
     const thead = table.querySelector("thead");
     if (!thead) return;
 
     const headerRows = Array.from(thead.rows || []);
     let top = 0;
 
-    headerRows.forEach(tr => {
+    headerRows.forEach((tr, rowIndex) => {
       const h = tr.getBoundingClientRect().height || 0;
       Array.from(tr.cells || []).forEach(th => {
         th.style.position = "sticky";
         th.style.top = top + "px";
         th.style.background = "rgba(15,23,48,.95)";
+        th.style.zIndex = String(15 - rowIndex); // keep earlier header rows above later ones
       });
       top += h;
+    });
+
+    // ensure the top-left "corner" cells are above all
+    headerRows.forEach(tr => {
+      const corner = tr.cells && tr.cells[0];
+      if (corner) corner.style.zIndex = "25";
     });
   }
 
@@ -532,8 +546,8 @@
       msgEl.textContent = (msgEl.textContent ? msgEl.textContent + " " : "") +
         "No picks yet (missing wildcard_picks.csv).";
 
-      // Still apply sticky to the header/first col once header exists
-      requestAnimationFrame(() => requestAnimationFrame(applyStickyFirstColumnAndHeaderRows));
+      setTimeout(applySticky, 0);
+      window.addEventListener("resize", () => setTimeout(applySticky, 0));
       return;
     }
 
@@ -543,8 +557,8 @@
     msgEl.textContent =
       (!linesText ? "Loaded picks. Missing lines.csv." : "Loaded wildcard_picks.csv and lines.csv.");
 
-    // Apply sticky after DOM has painted sizes
-    requestAnimationFrame(() => requestAnimationFrame(applyStickyFirstColumnAndHeaderRows));
+    setTimeout(applySticky, 0);
+    window.addEventListener("resize", () => setTimeout(applySticky, 0));
   }
 
   main().catch(err => {
@@ -556,4 +570,3 @@
 </script>
 </body>
 </html>
-
