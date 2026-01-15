@@ -161,9 +161,8 @@
   // =========================
 
   // 1) Seed order list (14 teams) EXACTLY as ESPN/team names appear in your CSV.
-  // Put them in the exact order you want displayed.
   const SEED_ORDER = [
-      "Denver Broncos", " New England Patriots", "Jacksonville Jaguars", "Pittsburgh Steelers", "Houston Texans", "Buffalo Bills", "Los Angeles Chargers", 
+      "Denver Broncos", "New England Patriots", "Jacksonville Jaguars", "Pittsburgh Steelers", "Houston Texans", "Buffalo Bills", "Los Angeles Chargers", 
       "Seattle Seahawks", "Chicago Bears", "Philadelphia Eagles", "Carolina Panthers", "Los Angeles Rams", "San Francisco 49ers", "Green Bay Packers" 
   ];
 
@@ -186,9 +185,9 @@
   // Fill these in later when known
   // =========================
   const ACTUAL = {
-    afc: "TBD",   // e.g. "Kansas City Chiefs"
-    nfc: "TBD",   // e.g. "Detroit Lions"
-    sb:  "TBD"    // e.g. "Kansas City Chiefs"
+    afc: "",   // e.g. "Kansas City Chiefs"
+    nfc: "",   // e.g. "Detroit Lions"
+    sb:  ""    // e.g. "Kansas City Chiefs"
   };
 
   // CSV file
@@ -237,10 +236,12 @@
     } catch (e) { return null; }
   }
 
-  function isEliminated(teamName){
-    const t = norm(teamName);
-    return ELIMINATED_TEAMS.some(x => norm(x) === t);
-  }
+function renderTeam(teamName) {
+  const t = String(teamName || "").trim();
+  if (!t || t.toUpperCase() === "TBD") return t; // never style TBD
+  const cls = isEliminated(t) ? "eliminated" : "";
+  return `<span class="${cls}">${t}</span>`;
+}
 
   function fmtPickCell(teamName, correctTeamName) {
     const t = String(teamName || "").trim();
