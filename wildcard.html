@@ -123,8 +123,8 @@
     #msg { color: var(--muted); font-size: 12px; margin-top: 10px; }
 
     /* --- Sticky first column (Entrant) --- */
-#tbl th:first-child,
-#tbl td:first-child{
+#picksTable th:first-child,
+#picksTable td:first-child{
   position: sticky;
   left: 0;
   z-index: 5;
@@ -132,7 +132,7 @@
 }
 
 /* Make header cells stay above everything */
-#tbl thead th{
+#picksTable thead th{
   z-index: 10;
   </style>
 </head>
@@ -564,7 +564,7 @@
 }
 
 // Call it after the table is rendered:
-lockTopRows("tbl", 4);
+lockTopRows("picksTable", 4);
   
 </script>
 </body>
