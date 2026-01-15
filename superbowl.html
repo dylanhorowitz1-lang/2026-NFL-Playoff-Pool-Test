@@ -14,6 +14,7 @@
       --accent:#5eead4;
       --border: rgba(255,255,255,.12);
       --shadow: 0 12px 30px rgba(0,0,0,.35);
+      --grid: rgba(255,255,255,.18);
     }
     *{box-sizing:border-box}
     body{
@@ -25,7 +26,7 @@
       color:var(--text);
       min-height:100vh;
     }
-    .wrap{max-width:1000px;margin:0 auto;padding:28px 16px 44px}
+    .wrap{max-width:1200px;margin:0 auto;padding:28px 16px 44px}
     .top{
       display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;
       padding:18px 18px 10px;border:1px solid var(--border);border-radius:18px;background:rgba(17,26,51,.55);
@@ -33,53 +34,94 @@
     }
     h1{margin:0;font-size:28px;letter-spacing:.2px}
     .sub{margin:6px 0 0;color:var(--muted);max-width:860px;line-height:1.45}
-    .pill{
-      display:inline-flex;align-items:center;gap:8px;
-      padding:8px 10px;border:1px solid var(--border);border-radius:999px;
-      color:var(--muted);font-size:12px;background:rgba(15,23,48,.55)
-    }
-    .nav{
-      margin-top:12px;
-      display:flex;gap:10px;flex-wrap:wrap;
-    }
+    .nav{margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;}
     .btn{
       display:inline-flex;align-items:center;gap:8px;
-      padding:10px 12px;border-radius:12px;
-      border:1px solid var(--border);
-      background: rgba(15,23,48,.65);
-      color:var(--text);
-      text-decoration:none;
+      padding:10px 12px;border-radius:12px;border:1px solid var(--border);
+      background: rgba(15,23,48,.65);color:var(--text);text-decoration:none;
       transition: transform .12s ease, border-color .12s ease;
     }
     .btn:hover{transform: translateY(-1px);border-color: rgba(94,234,212,.45)}
     .card{
-      margin-top:18px;
-      border:1px solid var(--border);
-      border-radius:18px;
+      margin-top:18px;border:1px solid var(--border);border-radius:18px;
       background: linear-gradient(180deg, rgba(17,26,51,.75), rgba(15,23,48,.65));
-      box-shadow: var(--shadow);
-      padding:14px;
-      overflow-x:auto;
+      box-shadow: var(--shadow);padding:14px;overflow-x:auto;
     }
 
-    table { border-collapse: collapse; width: 100%; min-width: 720px; }
-    th, td { border: 1px solid rgba(255,255,255,.18); padding: 8px; text-align: center; }
-    th.name, td.name { text-align: left; font-weight: bold; white-space: nowrap; }
-    thead th { background: rgba(15,23,48,.95); position: sticky; top: 0; z-index: 2; }
+    /* Tables */
+    table{
+      border-collapse: collapse;
+      width: 100%;
+      min-width: 900px;
+      table-layout: fixed;
+    }
+    th, td{
+      border: 1px solid var(--grid);
+      padding: 7px 8px;
+      text-align: center;
+      vertical-align: middle;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 13px;
+    }
+    thead th{
+      position: sticky;
+      top: 0;
+      background: rgba(15,23,48,.95);
+      z-index: 2;
+    }
+    th.name, td.name{
+      text-align:left;
+      font-weight: 700;
+      width: 220px;
+    }
+
+    /* Wild Card Picks colors (same classes) */
+    .pending { background: #2a3357; }   /* darker gray */
+    .correct { background: #1f6f4a; }   /* green */
+    .wrong   { background: #7a2b3a; }   /* red */
+    .push    { background: #6b5b1f; }   /* yellow */
+
+    /* Extra: eliminated team text */
+    .eliminated{
+      color: #ffb4c0; /* readable on dark */
+      text-decoration: line-through;
+      font-weight: 700;
+    }
+
+    /* Actual Results row styling */
+    .actualRow th, .actualRow td{
+      background: rgba(15,23,48,.70);
+      font-weight: 800;
+      color: var(--muted);
+    }
+    .actualRow .label{
+      color: var(--text);
+      font-weight: 900;
+    }
+
+    .sectionTitle{
+      margin: 0 0 10px 0;
+      font-size: 16px;
+      color: var(--text);
+      letter-spacing: .2px;
+    }
 
     #msg { color: var(--muted); font-size: 12px; margin-top: 10px; }
   </style>
 </head>
+
 <body>
   <div class="wrap">
     <div class="top">
       <div>
         <h1>Super Bowl Predictions</h1>
+        <p class="sub">Picks load from <b>superbowl_predictions.csv</b>. This page also highlights eliminated teams.</p>
         <div class="nav">
           <a class="btn" href="index.html">Home</a>
-          <a class="btn" href="standings.html">Standings</a>
           <a class="btn" href="wildcard.html">Wild Card Picks</a>
-          <a class="btn" href="games.html">NFL Scores</a>
+          <a class="btn" href="standings.html">Standings</a>
         </div>
       </div>
       <div class="pill">Manual refresh</div>
@@ -88,23 +130,67 @@
     <div id="msg"></div>
 
     <div class="card">
-      <table>
+      <table id="predTable">
+        <thead id="thead"></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="sectionTitle">Pick Distribution</div>
+      <table id="distTable">
         <thead>
           <tr>
-            <th class="name">Entrant</th>
+            <th class="name">Team</th>
             <th>AFC Champion</th>
             <th>NFC Champion</th>
             <th>Super Bowl Champion</th>
           </tr>
         </thead>
-        <tbody id="tbody"></tbody>
+        <tbody id="distBody"></tbody>
       </table>
     </div>
   </div>
 
 <script>
+(() => {
+  "use strict";
+
+  // =========================
+  // YOU EDIT THESE TWO LISTS
+  // =========================
+
+  // 1) Seed order list (14 teams) EXACTLY as ESPN/team names appear in your CSV.
+  // Put them in the exact order you want displayed.
+  const SEED_ORDER = [
+      "Denver Broncos", " New England Patriots", "Jacksonville Jaguars", "Pittsburgh Steelers", "Houston Texans", "Buffalo Bills", "Los Angeles Chargers", 
+      "Seattle Seahawks", "Chicago Bears", "Philadelphia Eagles", "Carolina Panthers", "Los Angeles Rams", "San Francisco 49ers", "Green Bay Packers" 
+  ];
+
+  // 2) Eliminated teams list — add team names here as they get eliminated.
+  const ELIMINATED_TEAMS = [
+      "Jacksonville Jaguars", "Pittsburgh Steelers", "Los Angeles Chargers", "Philadelphia Eagles", "Carolina Panthers", "Green Bay Packers"
+  ];
+
+  // =========================
+  // ACTUAL RESULTS (TBD now)
+  // Fill these in later when known
+  // =========================
+  const ACTUAL = {
+    afc: "TBD",   // e.g. "Kansas City Chiefs"
+    nfc: "TBD",   // e.g. "Detroit Lions"
+    sb:  "TBD"    // e.g. "Kansas City Chiefs"
+  };
+
+  // CSV file
+  const CSV_PATH = "superbowl_predictions.csv";
+
   const msgEl = document.getElementById("msg");
+  const theadEl = document.getElementById("thead");
   const tbodyEl = document.getElementById("tbody");
+  const distBodyEl = document.getElementById("distBody");
+
+  function norm(s){ return String(s || "").trim().toLowerCase(); }
 
   function splitCSVLine(line) {
     const out = [];
@@ -141,39 +227,169 @@
       return await r.text();
     } catch (e) { return null; }
   }
-function render(rows) {
-  tbodyEl.innerHTML = "";
-  rows
-    .filter(r => String(r.Name || "").trim() !== "")
-    .forEach(r => {
+
+  function isEliminated(teamName){
+    const t = norm(teamName);
+    return ELIMINATED_TEAMS.some(x => norm(x) === t);
+  }
+
+  function fmtPickCell(teamName, correctTeamName) {
+    const t = String(teamName || "").trim();
+    if (!t) return { html: "", cls: "pending" };
+
+    // eliminated styling (text)
+    const elim = isEliminated(t);
+    const inner = elim ? `<span class="eliminated">${t}</span>` : t;
+
+    // correct highlighting only if correctTeamName is set
+    if (correctTeamName && norm(t) === norm(correctTeamName)) {
+      return { html: inner, cls: "correct" };
+    }
+
+    // if correctTeamName is set and pick is different => wrong
+    if (correctTeamName) {
+      return { html: inner, cls: "wrong" };
+    }
+
+    // otherwise pending
+    return { html: inner, cls: "pending" };
+  }
+
+  function buildHeader() {
+    // Row 1: Actual results (above everything)
+    const afcTxt = ACTUAL.afc ? ACTUAL.afc : "TBD";
+    const nfcTxt = ACTUAL.nfc ? ACTUAL.nfc : "TBD";
+    const sbTxt  = ACTUAL.sb  ? ACTUAL.sb  : "TBD";
+
+    const rowActual = `
+      <tr class="actualRow">
+        <th class="name label">Actual Results</th>
+        <td>${afcTxt}</td>
+        <td>${nfcTxt}</td>
+        <td>${sbTxt}</td>
+      </tr>
+    `;
+
+    // Row 2: column headers
+    const rowCols = `
+      <tr>
+        <th class="name">Entrant</th>
+        <th>AFC Champion</th>
+        <th>NFC Champion</th>
+        <th>Super Bowl Champion</th>
+      </tr>
+    `;
+
+    theadEl.innerHTML = rowActual + rowCols;
+  }
+
+  function renderRows(rows) {
+    tbodyEl.innerHTML = "";
+
+    // Keep CSV order, just filter blanks
+    rows
+      .filter(r => String(r.Name || "").trim() !== "")
+      .forEach(r => {
+        const name = String(r.Name || "").trim();
+
+        // Support both "AFCChampion" and "AFC Champion" etc.
+        const afcPick = String(r.AFCChampion || r["AFC Champion"] || "").trim();
+        const nfcPick = String(r.NFCChampion || r["NFC Champion"] || "").trim();
+        const sbPick  = String(r.SuperBowlChampion || r["Super Bowl Champion"] || r.SBChampion || "").trim();
+
+        const afcCell = fmtPickCell(afcPick, ACTUAL.afc);
+        const nfcCell = fmtPickCell(nfcPick, ACTUAL.nfc);
+        const sbCell  = fmtPickCell(sbPick,  ACTUAL.sb);
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="name">${name}</td>
+          <td class="${afcCell.cls}">${afcCell.html}</td>
+          <td class="${nfcCell.cls}">${nfcCell.html}</td>
+          <td class="${sbCell.cls}">${sbCell.html}</td>
+        `;
+        tbodyEl.appendChild(tr);
+      });
+  }
+
+  function buildDistribution(rows) {
+    // Count appearances across the 3 pick columns
+    const counts = new Map(); // team -> {afc,nfc,sb}
+
+    function ensure(team) {
+      if (!counts.has(team)) counts.set(team, { afc:0, nfc:0, sb:0 });
+      return counts.get(team);
+    }
+
+    rows
+      .filter(r => String(r.Name || "").trim() !== "")
+      .forEach(r => {
+        const afcPick = String(r.AFCChampion || r["AFC Champion"] || "").trim();
+        const nfcPick = String(r.NFCChampion || r["NFC Champion"] || "").trim();
+        const sbPick  = String(r.SuperBowlChampion || r["Super Bowl Champion"] || r.SBChampion || "").trim();
+
+        if (afcPick) ensure(afcPick).afc++;
+        if (nfcPick) ensure(nfcPick).nfc++;
+        if (sbPick)  ensure(sbPick).sb++;
+      });
+
+    // Render in SEED_ORDER if provided; otherwise use whatever teams appear (sorted A->Z)
+    const teams = (SEED_ORDER && SEED_ORDER.length)
+      ? SEED_ORDER.slice()
+      : Array.from(counts.keys()).sort((a,b) => a.localeCompare(b));
+
+    distBodyEl.innerHTML = "";
+    teams.forEach(team => {
+      const c = counts.get(team) || { afc:0, nfc:0, sb:0 };
+
+      const teamHtml = isEliminated(team)
+        ? `<span class="eliminated">${team}</span>`
+        : team;
+
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td class="name">${String(r["Name"] || "").trim()}</td>
-        <td>${String(r["AFC Champion"] || "").trim()}</td>
-        <td>${String(r["NFC Champion"] || "").trim()}</td>
-        <td>${String(r["Super Bowl Champion"] || "").trim()}</td>
+        <td class="name">${teamHtml}</td>
+        <td>${c.afc}</td>
+        <td>${c.nfc}</td>
+        <td>${c.sb}</td>
       `;
-      tbodyEl.appendChild(tr);
+      distBodyEl.appendChild(tr);
     });
-
   }
 
   async function main() {
-    msgEl.textContent = "Loading superbowl_predictions.csv…";
-    const text = await fetchTextOrNull("superbowl_predictions.csv");
+    msgEl.textContent = "Loading…";
+    buildHeader();
+
+    const text = await fetchTextOrNull(CSV_PATH);
     if (!text) {
       msgEl.textContent = "Missing superbowl_predictions.csv";
+      tbodyEl.innerHTML = "";
+      distBodyEl.innerHTML = "";
       return;
     }
+
     const rows = parseCSV(text);
-    render(rows);
-    msgEl.textContent = "Loaded superbowl_predictions.csv.";
+
+    renderRows(rows);
+    buildDistribution(rows);
+
+    // Basic sanity help if seed list missing
+    if (!SEED_ORDER.length) {
+      msgEl.textContent = "Loaded superbowl_predictions.csv. (Optional) Add SEED_ORDER list for Pick Distribution ordering.";
+    } else {
+      msgEl.textContent = "Loaded superbowl_predictions.csv.";
+    }
   }
 
   main().catch(err => {
     console.error(err);
-    msgEl.textContent = "Could not load predictions right now.";
+    msgEl.textContent = "Could not load Super Bowl predictions right now.";
   });
+
+})();
 </script>
+
 </body>
 </html>
+
