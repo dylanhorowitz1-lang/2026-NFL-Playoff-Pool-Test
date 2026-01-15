@@ -83,9 +83,17 @@
     .wrong   { background: #7a2b3a; }   /* red */
     .push    { background: #6b5b1f; }   /* yellow */
 
-    /* Eliminated team text (NO STRIKETHROUGH) */
+    /* Extra: eliminated team text (NO STRIKETHROUGH) */
     .eliminated{
       color: #ff7b92;
+      text-decoration: none;
+      font-weight: 800;
+    }
+
+    /* NEW: eliminated cell styling (whole cell turns red) */
+    .elimCell{
+      background: #7a2b3a !important; /* same red as .wrong */
+      color: var(--text);
       font-weight: 800;
       text-decoration: none;
     }
@@ -171,21 +179,17 @@
       "Jacksonville Jaguars", "Pittsburgh Steelers", "Los Angeles Chargers", "Philadelphia Eagles", "Carolina Panthers", "Green Bay Packers"
   ];
 
-  // Normalize helpers so matching is strict but resilient to spacing/case
+  // --- Normalization + set for strict matching
   function normalizeTeamName(s){
-    return String(s || "")
-      .replace(/\u00A0/g, " ")
-      .trim()
-      .toLowerCase();
+    return String(s || "").replace(/\u00A0/g," ").trim().toLowerCase();
   }
-
   const ELIMINATED_SET = new Set(ELIMINATED_TEAMS.map(normalizeTeamName));
 
   function isEliminated(teamName) {
     const key = normalizeTeamName(teamName);
     if (!key) return false;
     if (key === "tbd") return false;
-    if (!ELIMINATED_SET.size) return false;
+    if (ELIMINATED_SET.size === 0) return false;
     return ELIMINATED_SET.has(key);
   }
 
@@ -245,32 +249,33 @@
     } catch (e) { return null; }
   }
 
-  // Rendering helpers
+  // Team rendering for distribution table (text only)
   function renderTeam(teamName) {
     const t = String(teamName || "").trim();
-    if (!t || t.toUpperCase() === "TBD") return t; // never style TBD/blank
-    const cls = isEliminated(t) ? "eliminated" : "";
-    return cls ? `<span class="${cls}">${t}</span>` : t;
+    if (!t || t.toUpperCase() === "TBD") return t; // never style TBD
+    return isEliminated(t) ? `<span class="eliminated">${t}</span>` : t;
   }
 
+  // UPDATED: adds elimCell class so the WHOLE TD turns red
   function fmtPickCell(teamName, correctTeamName) {
     const t = String(teamName || "").trim();
     if (!t) return { html: "", cls: "pending" };
 
-    const inner = renderTeam(t);
+    const elim = isEliminated(t);
+    const extra = elim ? " elimCell" : "";
 
     // correct highlighting only if correctTeamName is set
     if (correctTeamName && norm(t) === norm(correctTeamName)) {
-      return { html: inner, cls: "correct" };
+      return { html: t, cls: "correct" + extra };
     }
 
     // if correctTeamName is set and pick is different => wrong
     if (correctTeamName) {
-      return { html: inner, cls: "wrong" };
+      return { html: t, cls: "wrong" + extra };
     }
 
     // otherwise pending
-    return { html: inner, cls: "pending" };
+    return { html: t, cls: "pending" + extra };
   }
 
   function fmtCount(n){
@@ -359,11 +364,9 @@
     teams.forEach(team => {
       const c = counts.get(team) || { afc:0, nfc:0, sb:0 };
 
-      const teamHtml = renderTeam(team);
-
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td class="name">${teamHtml}</td>
+        <td class="name">${renderTeam(team)}</td>
         <td>${fmtCount(c.afc)}</td>
         <td>${fmtCount(c.nfc)}</td>
         <td>${fmtCount(c.sb)}</td>
