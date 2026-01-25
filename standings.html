@@ -1,4 +1,3 @@
-<!doctype html>
 <html>
 <head>
   <meta charset="utf-8" />
@@ -62,8 +61,7 @@
       box-shadow: var(--shadow);padding:14px;overflow-x:auto;
     }
 
-    .hidden-col{ display:none !important; }
-
+    /* ===== TABLE ===== */
     #tbl{
       border-collapse: collapse;
       width: 100%;
@@ -100,9 +98,7 @@
     #tbl col.c-ou{ width: 54px; }
 
     #tbl col.c-subtotal{ width: 70px; }
-
     #tbl col.c-pred{ width: 78px; }
-
     #tbl col.c-total{ width: 82px; }
     #tbl col.c-tb{ width: 60px; }
 
@@ -163,13 +159,10 @@
           <col class="c-name">
 
           <col class="c-adv"><col class="c-spread"><col class="c-ou"><col class="c-subtotal">
-
           <col class="c-adv"><col class="c-spread"><col class="c-ou"><col class="c-subtotal">
-
           <col class="c-adv"><col class="c-spread"><col class="c-ou"><col class="c-subtotal">
 
           <col class="c-adv"><col class="c-spread"><col class="c-ou">
-
           <col class="c-pred"><col class="c-pred"><col class="c-pred"><col class="c-subtotal">
 
           <col class="c-total"><col class="c-tb">
@@ -181,9 +174,9 @@
             <th rowspan="2" class="name">Entrant</th>
 
             <th colspan="4">Wild Card</th>
-            <th colspan="4" class="future-round">Divisional</th>
-            <th colspan="4" class="future-round">Conference Championships</th>
-            <th colspan="7" class="future-round">Super Bowl</th>
+            <th colspan="4">Divisional</th>
+            <th colspan="4">Conference Championships</th>
+            <th colspan="7">Super Bowl</th>
 
             <th rowspan="2" class="totalcol">Total</th>
             <th rowspan="2" class="tbcol">Tie-breaker</th>
@@ -191,13 +184,11 @@
 
           <tr>
             <th>Adv</th><th>Spread</th><th>O/U</th><th class="subtotal block-end">Total</th>
+            <th>Adv</th><th>Spread</th><th>O/U</th><th class="subtotal block-end">Total</th>
+            <th>Adv</th><th>Spread</th><th>O/U</th><th class="subtotal block-end">Total</th>
 
-            <th class="future-round">Adv</th><th class="future-round">Spread</th><th class="future-round">O/U</th><th class="future-round subtotal block-end">Total</th>
-
-            <th class="future-round">Adv</th><th class="future-round">Spread</th><th class="future-round">O/U</th><th class="future-round subtotal block-end">Total</th>
-
-            <th class="future-round">Adv</th><th class="future-round">Spread</th><th class="future-round">O/U</th>
-            <th class="future-round">AFC</th><th class="future-round">NFC</th><th class="future-round">SB Champ</th><th class="future-round subtotal block-end">Total</th>
+            <th>Adv</th><th>Spread</th><th>O/U</th>
+            <th>AFC</th><th>NFC</th><th>SB Champ</th><th class="subtotal block-end">Total</th>
           </tr>
         </thead>
 
@@ -210,7 +201,6 @@
 (() => {
   "use strict";
 
-  // ===== ESPN SCOREBOARD (for finals + champ winners) =====
   const SCOREBOARD_URLS = [
     "https://api.codetabs.com/v1/proxy/?quest=" + encodeURIComponent(
       "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard"
@@ -220,7 +210,6 @@
     )
   ];
 
-  // ===== ESPN SUMMARY (fallback when scoreboard no longer contains past games) =====
   function summaryUrlsForGame(gid){
     const base = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=" + encodeURIComponent(gid);
     return [
@@ -229,7 +218,6 @@
     ];
   }
 
-  // ===== SCORING WEIGHTS =====
   const SC = {
     WC:   { adv: 3,    ats: 2,   ou: 1   },
     DIV:  { adv: 4.5,  ats: 3,   ou: 1.5 },
@@ -240,7 +228,6 @@
 
   const msgEl = document.getElementById("msg");
   const tbodyEl = document.getElementById("tbody");
-  const tableEl = document.getElementById("tbl");
 
   function norm(s) { return String(s || "").trim().toLowerCase(); }
 
@@ -304,7 +291,6 @@
     return map;
   }
 
-  // Normalize differences between scoreboard events and summary responses
   function getCompetition(ev){
     if (ev?.competitions?.[0]) return ev.competitions[0];
     if (ev?.header?.competitions?.[0]) return ev.header.competitions[0];
@@ -430,7 +416,7 @@
     });
   }
 
-  // ✅ FIXED: robust AFC/NFC champ detection (does NOT rely on ev.name containing "AFC Championship")
+  // Robust AFC/NFC/SB detection (works even when ev.name is just the matchup)
   function getChampWinners(eventsById) {
     let afcWinner = "", nfcWinner = "", sbWinner = "";
 
@@ -447,7 +433,6 @@
         ...notes.map(n => n?.note),
         ...notes.map(n => n?.text),
       ].filter(Boolean);
-
       return bits.join(" | ").toLowerCase();
     }
 
@@ -527,95 +512,30 @@
         <td>${r.wc_ou}</td>
         <td class="subtotal block-end">${r.wc_total}</td>
 
-        <td class="future-round">${r.div_adv}</td>
-        <td class="future-round">${r.div_ats}</td>
-        <td class="future-round">${r.div_ou}</td>
-        <td class="future-round subtotal block-end">${r.div_total}</td>
+        <td>${r.div_adv}</td>
+        <td>${r.div_ats}</td>
+        <td>${r.div_ou}</td>
+        <td class="subtotal block-end">${r.div_total}</td>
 
-        <td class="future-round">${r.conf_adv}</td>
-        <td class="future-round">${r.conf_ats}</td>
-        <td class="future-round">${r.conf_ou}</td>
-        <td class="future-round subtotal block-end">${r.conf_total}</td>
+        <td>${r.conf_adv}</td>
+        <td>${r.conf_ats}</td>
+        <td>${r.conf_ou}</td>
+        <td class="subtotal block-end">${r.conf_total}</td>
 
-        <td class="future-round">${r.sb_adv}</td>
-        <td class="future-round">${r.sb_ats}</td>
-        <td class="future-round">${r.sb_ou}</td>
+        <td>${r.sb_adv}</td>
+        <td>${r.sb_ats}</td>
+        <td>${r.sb_ou}</td>
 
-        <td class="future-round">${r.sb_afc}</td>
-        <td class="future-round">${r.sb_nfc}</td>
-        <td class="future-round">${r.sb_champ}</td>
-        <td class="future-round subtotal block-end">${r.sb_total}</td>
+        <td>${r.sb_afc}</td>
+        <td>${r.sb_nfc}</td>
+        <td>${r.sb_champ}</td>
+        <td class="subtotal block-end">${r.sb_total}</td>
 
         <td class="totalcol">${r.total}</td>
         <td class="tbcol">${Number(r.tiebreaker).toFixed(1).replace(/\.0$/, "")}</td>
       `;
       tbodyEl.appendChild(tr);
     });
-  }
-
-     const futureGroupMatchers = [/conference/i, /super bowl/i];
-
-    function getFutureColumnIndices() {
-      const rows = Array.from(tableEl.tHead.rows || []);
-      let targetRow = null;
-
-      for (const r of rows) {
-        const cells = Array.from(r.cells || []);
-        if (cells.some(c => futureGroupMatchers.some(rx => rx.test((c.textContent || "").trim())))) {
-          targetRow = r;
-          break;
-        }
-      }
-      if (!targetRow) return new Set();
-
-      const hidden = new Set();
-      let col = 0;
-
-      for (const cell of Array.from(targetRow.cells)) {
-        const span = cell.colSpan || 1;
-        const txt = (cell.textContent || "").trim();
-        const isFuture = futureGroupMatchers.some(rx => rx.test(txt));
-        if (isFuture) for (let i = col; i < col + span; i++) hidden.add(i);
-        col += span;
-      }
-      return hidden;
-    }
-
-    const futureCols = getFutureColumnIndices();
-
-    function applyCollapsed(collapsed) {
-      const allRows = [
-        ...Array.from(tableEl.tHead?.rows || []),
-        ...Array.from(tableEl.tBodies?.[0]?.rows || [])
-      ];
-
-      for (const tr of allRows) {
-        let col = (tr.parentElement === tableEl.tHead && tr.rowIndex === 1) ? 2 : 0;
-        for (const cell of Array.from(tr.cells || [])) {
-          const span = cell.colSpan || 1;
-          let shouldHide = false;
-
-          for (let i = col; i < col + span; i++) {
-            if (futureCols.has(i)) { shouldHide = true; break; }
-          }
-
-          cell.classList.toggle("hidden-col", collapsed && shouldHide);
-          col += span;
-        }
-      }
-
-      btn.textContent = collapsed ? "Show future rounds" : "Hide future rounds";
-    }
-
-    window.__futureCollapsed = true;
-    window.__applyFutureCollapse = applyCollapsed;
-
-    applyCollapsed(window.__futureCollapsed);
-
-    btn.onclick = () => {
-      window.__futureCollapsed = !window.__futureCollapsed;
-      applyCollapsed(window.__futureCollapsed);
-    };
   }
 
   function collectNeededGameIds(wcRows, divRows, confRows, sbRows){
@@ -638,7 +558,6 @@
     neededIds.forEach(gid => {
       if (!eventsById.has(String(gid))) missing.push(String(gid));
     });
-
     if (!missing.length) return;
 
     await Promise.all(missing.map(async (gid) => {
@@ -650,8 +569,6 @@
   }
 
   async function main() {
-    if (!msgEl || !tbodyEl) return;
-
     msgEl.textContent = "Loading…";
 
     const [linesText, wcText, divText, confText, sbText, predText] = await Promise.all([
