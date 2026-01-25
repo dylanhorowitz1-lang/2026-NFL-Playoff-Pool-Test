@@ -62,15 +62,13 @@
       box-shadow: var(--shadow);padding:14px;overflow-x:auto;
     }
 
-    /* Toggle support */
     .hidden-col{ display:none !important; }
 
-    /* ===== TABLE ===== */
     #tbl{
       border-collapse: collapse;
       width: 100%;
       min-width: 1200px;
-      table-layout: fixed; /* makes widths predictable */
+      table-layout: fixed;
     }
     #tbl th, #tbl td{
       border: 1px solid var(--grid);
@@ -94,48 +92,38 @@
       z-index: 2;
     }
 
-    /* Column widths (even + predictable) via <colgroup> */
     #tbl col.c-rank{ width: 44px; }
     #tbl col.c-name{ width: 180px; }
 
-    /* Pick columns */
     #tbl col.c-adv{ width: 72px; }
     #tbl col.c-spread{ width: 72px; }
     #tbl col.c-ou{ width: 54px; }
 
-    /* Subtotals */
     #tbl col.c-subtotal{ width: 70px; }
 
-    /* SB prediction cols */
     #tbl col.c-pred{ width: 78px; }
 
-    /* Total + Tiebreaker */
     #tbl col.c-total{ width: 82px; }
     #tbl col.c-tb{ width: 60px; }
 
-    /* Separators after each round subtotal */
     .block-end{
       border-right: 2px solid var(--sep) !important;
     }
 
-    /* Subtotal emphasis */
     .subtotal{
       background: var(--subtotalTint);
       font-weight: 800;
     }
 
-    /* TOTAL column emphasis: bold border around the whole column (header + body) */
     .totalcol{
       background: var(--totalTint);
       font-weight: 900;
       border-left: 3px solid var(--totalBorder) !important;
       border-right: 3px solid var(--totalBorder) !important;
     }
-    /* Cap the total column so it looks boxed */
     #tbl thead .totalcol{ border-top: 3px solid var(--totalBorder) !important; }
     #tbl tbody tr:last-child .totalcol{ border-bottom: 3px solid var(--totalBorder) !important; }
 
-    /* Tighten tiebreaker */
     .tbcol{
       font-size: 12px;
       color: rgba(232,236,255,.85);
@@ -143,7 +131,6 @@
 
     #msg{ color:var(--muted); font-size:12px; margin-top:10px; }
 
-    /* Widen Rank column so header fits */
     #tbl thead th:first-child,
     #tbl tbody td:first-child {
       width: 60px;
@@ -171,27 +158,20 @@
 
     <div class="card">
       <table id="tbl">
-        <!-- widths -->
         <colgroup>
           <col class="c-rank">
           <col class="c-name">
 
-          <!-- WC: adv, spread, ou, subtotal -->
           <col class="c-adv"><col class="c-spread"><col class="c-ou"><col class="c-subtotal">
 
-          <!-- DIV -->
           <col class="c-adv"><col class="c-spread"><col class="c-ou"><col class="c-subtotal">
 
-          <!-- CONF -->
           <col class="c-adv"><col class="c-spread"><col class="c-ou"><col class="c-subtotal">
 
-          <!-- SB game: adv, spread, ou -->
           <col class="c-adv"><col class="c-spread"><col class="c-ou">
 
-          <!-- SB preds: AFC, NFC, Champ, Total SB -->
           <col class="c-pred"><col class="c-pred"><col class="c-pred"><col class="c-subtotal">
 
-          <!-- Total + TB -->
           <col class="c-total"><col class="c-tb">
         </colgroup>
 
@@ -326,9 +306,7 @@
 
   // Normalize differences between scoreboard events and summary responses
   function getCompetition(ev){
-    // scoreboard: ev.competitions[0]
     if (ev?.competitions?.[0]) return ev.competitions[0];
-    // summary: header.competitions[0]
     if (ev?.header?.competitions?.[0]) return ev.header.competitions[0];
     return null;
   }
@@ -452,16 +430,44 @@
     });
   }
 
+  // ✅ FIXED: robust AFC/NFC champ detection (does NOT rely on ev.name containing "AFC Championship")
   function getChampWinners(eventsById) {
     let afcWinner = "", nfcWinner = "", sbWinner = "";
+
+    function eventSearchText(ev){
+      const comp = getCompetition(ev);
+      const notes = comp?.notes || [];
+      const bits = [
+        ev?.name, ev?.shortName,
+        ev?.header?.name, ev?.header?.shortName,
+        ev?.week?.text,
+        ev?.season?.type?.name, ev?.season?.type?.slug,
+        ...notes.map(n => n?.headline),
+        ...notes.map(n => n?.type),
+        ...notes.map(n => n?.note),
+        ...notes.map(n => n?.text),
+      ].filter(Boolean);
+
+      return bits.join(" | ").toLowerCase();
+    }
+
     for (const ev of eventsById.values()) {
       const info = eventInfo(ev);
       if (!info.isFinal) continue;
-      const title = norm(info.name);
-      if (!afcWinner && title.includes("afc") && title.includes("championship")) afcWinner = info.winnerTeam;
-      if (!nfcWinner && title.includes("nfc") && title.includes("championship")) nfcWinner = info.winnerTeam;
-      if (!sbWinner  && title.includes("super bowl")) sbWinner = info.winnerTeam;
+
+      const txt = eventSearchText(ev);
+
+      if (!afcWinner && (txt.includes("afc championship") || txt.includes("afc championship game"))) {
+        afcWinner = info.winnerTeam;
+      }
+      if (!nfcWinner && (txt.includes("nfc championship") || txt.includes("nfc championship game"))) {
+        nfcWinner = info.winnerTeam;
+      }
+      if (!sbWinner && (txt.includes("super bowl") || txt.includes("superbowl"))) {
+        sbWinner = info.winnerTeam;
+      }
     }
+
     return { afcWinner, nfcWinner, sbWinner };
   }
 
@@ -547,7 +553,6 @@
     });
   }
 
-  // ===== Collapse future rounds (Divisional + Conference + Super Bowl) =====
   function setupFutureCollapse() {
     if (!tableEl || !tableEl.tHead) return;
 
@@ -651,15 +656,11 @@
 
     if (!missing.length) return;
 
-    // Fetch each missing game via ESPN summary endpoint
     await Promise.all(missing.map(async (gid) => {
       try {
         const data = await fetchJsonWithFallback(summaryUrlsForGame(gid));
-        // Store the full summary response; eventInfo() handles it
         eventsById.set(String(gid), data);
-      } catch (e) {
-        // If summary also fails, we just leave it missing and scoring will skip it
-      }
+      } catch (e) {}
     }));
   }
 
@@ -686,7 +687,6 @@
     const sbRows   = sbText   ? parseCSV(sbText)   : [];
     const predRows = predText ? parseCSV(predText) : [];
 
-    // If scoreboard fails, still show 0’s (don’t brick the page)
     let scoreboard = { events: [] };
     try {
       scoreboard = await fetchJsonWithFallback(SCOREBOARD_URLS);
@@ -695,7 +695,6 @@
     const eventsById = new Map();
     (scoreboard.events || []).forEach(ev => { if (ev?.id) eventsById.set(String(ev.id), ev); });
 
-    // NEW: ensure we can still score past rounds even after scoreboard rotates weeks
     const neededIds = collectNeededGameIds(wcRows, divRows, confRows, sbRows);
     await hydrateMissingEvents(eventsById, neededIds);
 
