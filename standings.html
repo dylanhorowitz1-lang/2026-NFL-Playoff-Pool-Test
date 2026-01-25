@@ -553,22 +553,7 @@
     });
   }
 
-  function setupFutureCollapse() {
-    if (!tableEl || !tableEl.tHead) return;
-
-    let btn = document.getElementById("toggleFuture");
-    if (!btn) {
-      btn = document.createElement("button");
-      btn.className = "btn";
-      btn.id = "toggleFuture";
-      btn.type = "button";
-      btn.textContent = "Show future rounds";
-      const card = tableEl.closest(".card") || tableEl.parentElement;
-      if (card) card.insertBefore(btn, tableEl);
-      else tableEl.parentElement.insertBefore(btn, tableEl);
-    }
-
-    const futureGroupMatchers = [/conference/i, /super bowl/i];
+     const futureGroupMatchers = [/conference/i, /super bowl/i];
 
     function getFutureColumnIndices() {
       const rows = Array.from(tableEl.tHead.rows || []);
@@ -710,9 +695,6 @@
 
     finalizeTotals(standings);
     renderTable(Array.from(standings.values()));
-
-    setupFutureCollapse();
-    if (window.__applyFutureCollapse) window.__applyFutureCollapse(window.__futureCollapsed);
 
     const missingFiles = [];
     if (!wcText) missingFiles.push("wildcard_picks.csv");
