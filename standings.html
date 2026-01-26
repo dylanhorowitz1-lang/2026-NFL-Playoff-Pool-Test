@@ -19,6 +19,9 @@
       --totalBorder: rgba(255,255,255,.40);
       --subtotalTint: rgba(94,234,212,.10);
       --totalTint: rgba(99,102,241,.16);
+
+      /* JS will set this to the exact pixel height of header row #1 */
+      --standingsHeadOffset: 40px;
     }
     *{box-sizing:border-box}
     body{
@@ -83,11 +86,22 @@
       font-weight: 700;
       white-space: nowrap;
     }
+
+    /* --- 2-row sticky header fix --- */
     #tbl thead th{
       position: sticky;
-      top: 0;
       background: rgba(15,23,48,.95);
-      z-index: 2;
+      z-index: 5;
+    }
+    /* Row 1 sticks at top */
+    #tbl thead tr:nth-child(1) th{
+      top: 0;
+      z-index: 6;
+    }
+    /* Row 2 sticks below row 1 */
+    #tbl thead tr:nth-child(2) th{
+      top: var(--standingsHeadOffset);
+      z-index: 5;
     }
 
     #tbl col.c-rank{ width: 44px; }
@@ -169,7 +183,7 @@
         </colgroup>
 
         <thead>
-          <tr>
+          <tr id="standingsHeadRow1">
             <th rowspan="2">Rank</th>
             <th rowspan="2" class="name">Entrant</th>
 
@@ -228,6 +242,14 @@
 
   const msgEl = document.getElementById("msg");
   const tbodyEl = document.getElementById("tbody");
+
+  // Measure header row 1 height and set offset for row 2 (prevents overlap)
+  function setStickyOffset(){
+    const r1 = document.getElementById("standingsHeadRow1");
+    if (!r1) return;
+    const h = Math.ceil(r1.getBoundingClientRect().height);
+    document.documentElement.style.setProperty("--standingsHeadOffset", h + "px");
+  }
 
   function norm(s) { return String(s || "").trim().toLowerCase(); }
 
@@ -416,7 +438,6 @@
     });
   }
 
-  // Robust AFC/NFC/SB detection (works even when ev.name is just the matchup)
   function getChampWinners(eventsById) {
     let afcWinner = "", nfcWinner = "", sbWinner = "";
 
@@ -570,6 +591,10 @@
 
   async function main() {
     msgEl.textContent = "Loading…";
+
+    // ensure sticky math is correct once header is laid out
+    requestAnimationFrame(setStickyOffset);
+    window.addEventListener("resize", () => requestAnimationFrame(setStickyOffset));
 
     const [linesText, wcText, divText, confText, sbText, predText] = await Promise.all([
       fetchTextOrNull("lines.csv"),
