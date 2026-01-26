@@ -93,12 +93,10 @@
       background: rgba(15,23,48,.95);
       z-index: 5;
     }
-    /* Row 1 sticks at top */
     #tbl thead tr:nth-child(1) th{
       top: 0;
       z-index: 6;
     }
-    /* Row 2 sticks below row 1 */
     #tbl thead tr:nth-child(2) th{
       top: var(--standingsHeadOffset);
       z-index: 5;
@@ -177,7 +175,7 @@
           <col class="c-adv"><col class="c-spread"><col class="c-ou"><col class="c-subtotal">
 
           <col class="c-adv"><col class="c-spread"><col class="c-ou">
-          <col class="c-pred"><col class="c-pred"><col class="c-pred"><col class="c-subtotal">
+          <col class="c-pred"><col class="c-pred"><col class="c-pred"><col class="c-pred"><col class="c-subtotal">
 
           <col class="c-total"><col class="c-tb">
         </colgroup>
@@ -190,7 +188,7 @@
             <th colspan="4">Wild Card</th>
             <th colspan="4">Divisional</th>
             <th colspan="4">Conference Championships</th>
-            <th colspan="7">Super Bowl</th>
+            <th colspan="8">Super Bowl</th>
 
             <th rowspan="2" class="totalcol">Total</th>
             <th rowspan="2" class="tbcol">Tie-breaker</th>
@@ -202,7 +200,7 @@
             <th>Adv</th><th>Spread</th><th>O/U</th><th class="subtotal block-end">Total</th>
 
             <th>Adv</th><th>Spread</th><th>O/U</th>
-            <th>AFC</th><th>NFC</th><th>SB Champ</th><th class="subtotal block-end">Total</th>
+            <th>AFC</th><th>NFC</th><th>Both</th><th>SB Champ</th><th class="subtotal block-end">Total</th>
           </tr>
         </thead>
 
@@ -243,7 +241,6 @@
   const msgEl = document.getElementById("msg");
   const tbodyEl = document.getElementById("tbody");
 
-  // Measure header row 1 height and set offset for row 2 (prevents overlap)
   function setStickyOffset(){
     const r1 = document.getElementById("standingsHeadRow1");
     if (!r1) return;
@@ -319,10 +316,6 @@
     return null;
   }
 
-  function getEventName(ev){
-    return ev?.name || ev?.shortName || ev?.header?.name || ev?.header?.shortName || "";
-  }
-
   function eventInfo(ev) {
     const comp = getCompetition(ev);
     const teams = comp?.competitors || [];
@@ -336,7 +329,7 @@
 
     const isFinal = comp?.status?.type?.completed === true;
     const winnerTeam = isFinal ? (teams.find(t => t.winner === true)?.team?.displayName || "") : "";
-    return { awayName, homeName, awayScore, homeScore, isFinal, winnerTeam, name: getEventName(ev) };
+    return { awayName, homeName, awayScore, homeScore, isFinal, winnerTeam };
   }
 
   function computeATSWinnerAndHomeMargin(info, homeSpread) {
@@ -376,7 +369,7 @@
       div_adv:0,div_ats:0,div_ou:0,div_total:0,
       conf_adv:0,conf_ats:0,conf_ou:0,conf_total:0,
       sb_adv:0,sb_ats:0,sb_ou:0,
-      sb_afc:0,sb_nfc:0,sb_champ:0,sb_total:0,
+      sb_afc:0,sb_nfc:0,sb_both:0,sb_champ:0,sb_total:0,
       total:0,
       tiebreaker:0
     });
@@ -434,7 +427,6 @@
       if (prefix === "wc")   s.wc_total   = s.wc_adv + s.wc_ats + s.wc_ou;
       if (prefix === "div")  s.div_total  = s.div_adv + s.div_ats + s.div_ou;
       if (prefix === "conf") s.conf_total = s.conf_adv + s.conf_ats + s.conf_ou;
-      if (prefix === "sb")   s.sb_total   = (s.sb_adv||0) + (s.sb_ats||0) + (s.sb_ou||0) + (s.sb_afc||0) + (s.sb_nfc||0) + (s.sb_champ||0);
     });
   }
 
@@ -495,18 +487,17 @@
 
       s.sb_afc = afcCorrect ? SC.PRED.afc : 0;
       s.sb_nfc = nfcCorrect ? SC.PRED.nfc : 0;
-      s._sb_both_bonus = (champs.afcWinner && champs.nfcWinner && afcCorrect && nfcCorrect) ? SC.PRED.both : 0;
+      s.sb_both = (champs.afcWinner && champs.nfcWinner && afcCorrect && nfcCorrect) ? SC.PRED.both : 0;
       s.sb_champ = sbCorrect ? SC.PRED.champ : 0;
     });
   }
 
   function finalizeTotals(standings) {
     standings.forEach(s => {
-      const sbPredTotal = (s.sb_afc||0) + (s.sb_nfc||0) + (s._sb_both_bonus||0) + (s.sb_champ||0);
+      const sbPredTotal = (s.sb_afc||0) + (s.sb_nfc||0) + (s.sb_both||0) + (s.sb_champ||0);
       const sbGameTotal = (s.sb_adv||0) + (s.sb_ats||0) + (s.sb_ou||0);
       s.sb_total = sbGameTotal + sbPredTotal;
       s.total = (s.wc_total||0) + (s.div_total||0) + (s.conf_total||0) + (s.sb_total||0);
-      delete s._sb_both_bonus;
     });
   }
 
@@ -549,6 +540,7 @@
 
         <td>${r.sb_afc}</td>
         <td>${r.sb_nfc}</td>
+        <td>${r.sb_both}</td>
         <td>${r.sb_champ}</td>
         <td class="subtotal block-end">${r.sb_total}</td>
 
@@ -592,7 +584,6 @@
   async function main() {
     msgEl.textContent = "Loading…";
 
-    // ensure sticky math is correct once header is laid out
     requestAnimationFrame(setStickyOffset);
     window.addEventListener("resize", () => requestAnimationFrame(setStickyOffset));
 
